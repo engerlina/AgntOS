@@ -54,8 +54,8 @@ fi
   [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && echo "TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}"
 } > "${HERMES_HOME}/.env"
 chmod 600 "${HERMES_HOME}/.env" 2>/dev/null || true
-# Also export (Hermes may read either source).
-export API_SERVER_ENABLED=true API_SERVER_HOST=0.0.0.0 API_SERVER_PORT=8642
+# Also export (Hermes reads API_SERVER_* from process env via os.getenv).
+export API_SERVER_ENABLED=true API_SERVER_HOST=0.0.0.0 API_SERVER_PORT=8642 API_SERVER_CORS_ORIGINS="*"
 
 echo "[agntos] booting agent ${AGENT_ID:-?} (${AGENT_NAME:-Agent}) model=${HERMES_INFERENCE_MODEL} channel=${CHANNEL:-none}"
 
@@ -71,7 +71,9 @@ fi
 # `hermes gateway` reads channel tokens from env. If your build needs a one-time
 # non-interactive init first, add it here (e.g. `hermes setup --portal` flags).
 if command -v hermes >/dev/null 2>&1; then
-  exec hermes gateway
+  # `gateway run` is the headless launch (per the Docker guide); it starts the
+  # messaging platforms AND the OpenAI-compatible API server when enabled.
+  exec hermes gateway run
 else
   echo "[agntos] ERROR: 'hermes' not on PATH. Check the install step in the Dockerfile." >&2
   tail -f /dev/null

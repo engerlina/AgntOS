@@ -80,6 +80,16 @@ export async function slugAvailable(slug: string): Promise<boolean> {
   return !existing;
 }
 
+/** Resolve an agent by its handle (subdomain), for <slug>.agntos.net routing. */
+export async function agentBySlug(slug: string): Promise<{ id: string; userId: string } | null> {
+  const [row] = await db
+    .select({ id: agent.id, userId: agent.userId })
+    .from(agent)
+    .where(eq(agent.slug, slug))
+    .limit(1);
+  return row ?? null;
+}
+
 /**
  * Insert the agent row (status=provisioning) and enqueue the provisioning job.
  * The Telegram bot token is NOT stored in our DB — it's passed straight to the

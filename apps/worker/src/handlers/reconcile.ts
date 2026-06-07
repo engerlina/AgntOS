@@ -1,6 +1,7 @@
 import { env, log } from "@agntos/core";
+import { isCompEmail } from "@agntos/core/billing";
 import { getProvider, type AgentRef } from "@agntos/core/provisioning";
-import { agent, db, eq, inArray, subscription } from "@agntos/db";
+import { agent, db, eq, inArray, subscription, user } from "@agntos/db";
 
 import { handlePause } from "./lifecycle";
 
@@ -33,6 +34,12 @@ export async function handleReconcile(): Promise<void> {
     for (const s of subs) {
       if (s.status === "active" || s.status === "trialing") activeUsers.add(s.referenceId);
     }
+    // Comped accounts are always "active" (no subscription required).
+    const users = await db
+      .select({ id: user.id, email: user.email })
+      .from(user)
+      .where(inArray(user.id, userIds));
+    for (const u of users) if (isCompEmail(u.email)) activeUsers.add(u.id);
   }
 
   const provider = getProvider();
