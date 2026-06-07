@@ -78,6 +78,13 @@ export function DashboardLauncher({
         <p className="mt-6 text-sm text-muted">{message}</p>
         <p className="mt-1 font-mono text-xs text-faint">{slug}.agntos.net</p>
 
+        <p className="mt-5 text-xs leading-relaxed text-muted">
+          Hang tight — your agent runs on its own private machine, so the first load
+          can take a minute or two to warm up. Once the dashboard opens, the{" "}
+          <span className="text-ink">first message is often slower</span> while the
+          model spins up; after that it&apos;s quick.
+        </p>
+
         {tooLong && (
           <p className="mt-5 border-t-2 border-hair pt-4 text-xs text-faint">
             Taking longer than usual.{" "}
