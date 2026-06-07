@@ -66,6 +66,13 @@ echo "[agntos] booting agent ${AGENT_ID:-?} (${AGENT_NAME:-Agent}) model=${HERME
 # ── Personality / system prompt (best-effort; confirm the real config key) ─────
 # TODO(hermes): set the agent's persona via the documented mechanism. Likely one
 # of `hermes config set <key> "..."` or a file under $HERMES_HOME. Non-fatal.
+# Set the inference model in Hermes' CONFIG — HERMES_INFERENCE_MODEL (env) is
+# IGNORED by Hermes; it reads `model.default` from config.yaml (which the install
+# defaults to claude-opus). This is the setting that actually takes effect.
+if command -v hermes >/dev/null 2>&1 && [ -n "${HERMES_INFERENCE_MODEL:-}" ]; then
+  hermes config set model.default "${HERMES_INFERENCE_MODEL}" >/dev/null 2>&1 || true
+fi
+
 if [ -n "${AGENT_PERSONALITY:-}" ]; then
   printf '%s\n' "${AGENT_PERSONALITY}" > "${HERMES_HOME}/system.md" || true
   hermes config set system_prompt "${AGENT_PERSONALITY}" >/dev/null 2>&1 || true
@@ -78,6 +85,8 @@ fi
 #    if anything here fails, the agent (gateway) still runs. ─────────────────────
 if [ -n "${DASHBOARD_PASSWORD:-}" ] && command -v caddy >/dev/null 2>&1; then
   DASH_HASH="$(caddy hash-password --plaintext "${DASHBOARD_PASSWORD}" 2>/dev/null || true)"
+  # Per-agent cookie value (derived from the password) for the modal-free gate.
+  DASH_CV="$(printf '%s' "${DASHBOARD_PASSWORD}" | sha256sum | cut -c1-32)"
   if [ -n "${DASH_HASH}" ]; then
     {
       echo "{"
@@ -85,14 +94,27 @@ if [ -n "${DASHBOARD_PASSWORD:-}" ] && command -v caddy >/dev/null 2>&1; then
       echo "  admin off"
       echo "}"
       echo ":8088 {"
-      echo "  basic_auth {"
-      echo "    ${DASHBOARD_USER:-agent} ${DASH_HASH}"
+      # Modal-free login: the AgntOS deep-link hits /__enter (basic-auth), which
+      # sets a cookie and 302s to the clean URL. Cookie-bearing requests then skip
+      # basic-auth — so the dashboard runs on a CLEAN URL (credentials in the URL
+      # break its relative fetch() calls) with no repeating auth modal.
+      echo "  @authed header Cookie *dash_ok=${DASH_CV}*"
+      echo "  handle @authed {"
+      echo "    reverse_proxy 127.0.0.1:9119"
       echo "  }"
-      # Forward the ORIGINAL Host (do NOT rewrite) so the dashboard scopes its
-      # session cookie to <slug>.agntos.net. Do NOT add X-Forwarded-Proto — it
-      # breaks uvicorn's WebSocket upgrade (the Chat tab's PTY → 502); the Secure
-      # cookie is already handled by HERMES_DASHBOARD_PUBLIC_URL=https://…
-      echo "  reverse_proxy 127.0.0.1:9119"
+      echo "  handle {"
+      echo "    basic_auth {"
+      echo "      ${DASHBOARD_USER:-agent} ${DASH_HASH}"
+      echo "    }"
+      echo "    handle /__enter {"
+      echo "      header +Set-Cookie \"dash_ok=${DASH_CV}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400\""
+      echo "      redir https://{host}/chat 302"
+      echo "    }"
+      echo "    handle {"
+      # Forward the ORIGINAL Host (no X-Forwarded-Proto — it breaks the PTY WS).
+      echo "      reverse_proxy 127.0.0.1:9119"
+      echo "    }"
+      echo "  }"
       echo "}"
     } > /tmp/Caddyfile
     echo "[agntos] starting Hermes dashboard (:9119) + Caddy auth proxy (:8088)"
