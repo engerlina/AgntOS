@@ -41,12 +41,21 @@ if [ -z "${OPENROUTER_API_KEY:-}" ]; then
   exit 1
 fi
 
-# ── Web access: enable Hermes' OpenAI-compatible API server so the AgntOS
-#    control plane can proxy browser chat to this agent. Bound to 0.0.0.0 so the
-#    exposed Fly service reaches it; API_SERVER_KEY arrives as a Fly secret. ─────
-export API_SERVER_ENABLED="${API_SERVER_ENABLED:-true}"
-export API_SERVER_HOST="${API_SERVER_HOST:-0.0.0.0}"
-export API_SERVER_PORT="${API_SERVER_PORT:-8642}"
+# ── Hermes reads its settings from ~/.hermes/.env (its config file), so write the
+#    full config there — provider, model, channel, and the web API server. More
+#    reliable than process env alone. Lives on the encrypted Fly volume.
+{
+  echo "OPENROUTER_API_KEY=${OPENROUTER_API_KEY}"
+  echo "HERMES_INFERENCE_MODEL=${HERMES_INFERENCE_MODEL}"
+  echo "API_SERVER_ENABLED=true"
+  echo "API_SERVER_HOST=0.0.0.0"
+  echo "API_SERVER_PORT=8642"
+  [ -n "${API_SERVER_KEY:-}" ] && echo "API_SERVER_KEY=${API_SERVER_KEY}"
+  [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && echo "TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}"
+} > "${HERMES_HOME}/.env"
+chmod 600 "${HERMES_HOME}/.env" 2>/dev/null || true
+# Also export (Hermes may read either source).
+export API_SERVER_ENABLED=true API_SERVER_HOST=0.0.0.0 API_SERVER_PORT=8642
 
 echo "[agntos] booting agent ${AGENT_ID:-?} (${AGENT_NAME:-Agent}) model=${HERMES_INFERENCE_MODEL} channel=${CHANNEL:-none}"
 
