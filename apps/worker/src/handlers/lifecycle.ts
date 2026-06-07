@@ -2,13 +2,20 @@ import {
   log,
   type DestroyAgentJob,
   type PauseAgentJob,
+  type ReconfigureAgentJob,
   type ResizeAgentJob,
   type ResumeAgentJob,
 } from "@agntos/core";
 import { deleteAgentDns, isCloudflareConfigured } from "@agntos/core/cloudflare";
+import { decryptSecret } from "@agntos/core/crypto";
 import { deleteRuntimeKey, setRuntimeKeyDisabled } from "@agntos/core/openrouter";
-import { getProvider, type AgentRef } from "@agntos/core/provisioning";
-import { agent, auditLog, db, eq } from "@agntos/db";
+import {
+  getProvider,
+  setFlySecrets,
+  unsetFlySecrets,
+  type AgentRef,
+} from "@agntos/core/provisioning";
+import { agent, and, auditLog, channel, db, eq } from "@agntos/db";
 
 type AgentRow = typeof agent.$inferSelect;
 
@@ -103,4 +110,54 @@ export async function handleResize(data: ResizeAgentJob): Promise<void> {
     .set({ ramMb: data.ramMb, updatedAt: new Date() })
     .where(eq(agent.id, row.id));
   log.info("agent resized", { agentId: row.id, ramMb: data.ramMb });
+}
+
+/**
+ * Connect or disconnect a messaging channel (Telegram) on a running agent:
+ * set/unset the bot-token Fly secret, then restart so it takes effect at boot.
+ */
+export async function handleReconfigure(data: ReconfigureAgentJob): Promise<void> {
+  const row = await load(data.agentId);
+  if (!row) return;
+  const ref = refOf(row);
+  if (!ref) {
+    log.warn("reconfigure: no infra ref", { agentId: row.id });
+    return;
+  }
+
+  if (data.action === "connect" && data.telegram) {
+    const token = await decryptSecret(data.telegram.tokenCipher);
+    await setFlySecrets(ref.appId, { TELEGRAM_BOT_TOKEN: token, CHANNEL: "telegram" });
+  } else if (data.action === "disconnect") {
+    await unsetFlySecrets(ref.appId, ["TELEGRAM_BOT_TOKEN"]);
+  }
+
+  // Secrets inject at boot — restart to apply.
+  await getProvider().stop(ref).catch(() => {});
+  await getProvider().start(ref);
+
+  if (data.action === "connect") {
+    const [existing] = await db
+      .select({ id: channel.id })
+      .from(channel)
+      .where(and(eq(channel.agentId, row.id), eq(channel.type, "telegram")))
+      .limit(1);
+    const values = { status: "connected" as const, externalRef: data.telegram?.ref ?? null };
+    if (existing) {
+      await db.update(channel).set(values).where(eq(channel.id, existing.id));
+    } else {
+      await db.insert(channel).values({ agentId: row.id, type: "telegram", ...values });
+    }
+  } else {
+    await db
+      .delete(channel)
+      .where(and(eq(channel.agentId, row.id), eq(channel.type, "telegram")));
+  }
+
+  await db.insert(auditLog).values({
+    userId: row.userId,
+    action: `agent.channel.${data.action}`,
+    meta: { agentId: row.id, channel: data.channel },
+  });
+  log.info("agent reconfigured", { agentId: row.id, action: data.action });
 }

@@ -6,7 +6,13 @@ import PgBoss, { type Job } from "pg-boss";
 import { env, log, QUEUE, type JobPayloads, type QueueName } from "@agntos/core";
 
 import { handleProvision } from "./handlers/provision";
-import { handleDestroy, handlePause, handleResize, handleResume } from "./handlers/lifecycle";
+import {
+  handleDestroy,
+  handlePause,
+  handleReconfigure,
+  handleResize,
+  handleResume,
+} from "./handlers/lifecycle";
 import { handleReconcile } from "./handlers/reconcile";
 import { handleSyncUsage } from "./handlers/usage";
 
@@ -49,6 +55,7 @@ async function main() {
   await work(QUEUE.resumeAgent, handleResume);
   await work(QUEUE.destroyAgent, handleDestroy);
   await work(QUEUE.resizeAgent, handleResize);
+  await work(QUEUE.reconfigureAgent, handleReconfigure);
   await work(QUEUE.reconcileLifecycle, async () => handleReconcile());
   await work(QUEUE.syncUsage, async () => handleSyncUsage());
 

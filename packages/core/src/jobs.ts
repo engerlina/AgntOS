@@ -9,6 +9,7 @@ export const QUEUE = {
   resumeAgent: "resume_agent",
   destroyAgent: "destroy_agent",
   resizeAgent: "resize_agent",
+  reconfigureAgent: "reconfigure_agent",
   reconcileLifecycle: "reconcile_lifecycle",
   syncUsage: "sync_usage",
 } as const;
@@ -40,6 +41,14 @@ export interface ResizeAgentJob {
   agentId: string;
   ramMb: number;
 }
+/** Connect or disconnect a messaging channel on a running agent. */
+export interface ReconfigureAgentJob {
+  agentId: string;
+  action: "connect" | "disconnect";
+  channel: "telegram";
+  /** Present for connect — the bot token, encrypted (decrypted to a Fly secret). */
+  telegram?: { tokenCipher: string; ref?: string };
+}
 /** Cron jobs carry no payload. */
 export type ReconcileLifecycleJob = Record<string, never>;
 export type SyncUsageJob = Record<string, never>;
@@ -50,6 +59,7 @@ export interface JobPayloads {
   [QUEUE.resumeAgent]: ResumeAgentJob;
   [QUEUE.destroyAgent]: DestroyAgentJob;
   [QUEUE.resizeAgent]: ResizeAgentJob;
+  [QUEUE.reconfigureAgent]: ReconfigureAgentJob;
   [QUEUE.reconcileLifecycle]: ReconcileLifecycleJob;
   [QUEUE.syncUsage]: SyncUsageJob;
 }

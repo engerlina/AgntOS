@@ -175,6 +175,49 @@ export async function destroyAgent(userId: string, agentId: string) {
   return row;
 }
 
+/** Connect a Telegram bot to a running agent (token → Fly secret + restart). */
+export async function connectTelegram(
+  userId: string,
+  agentId: string,
+  input: { botToken: string; ref?: string },
+) {
+  const row = await getAgentForUser(userId, agentId);
+  if (!row) return null;
+  const tokenCipher = await encryptSecret(input.botToken);
+  const [existing] = await db
+    .select({ id: channel.id })
+    .from(channel)
+    .where(and(eq(channel.agentId, agentId), eq(channel.type, "telegram")))
+    .limit(1);
+  if (existing) {
+    await db.update(channel).set({ status: "pending", externalRef: input.ref ?? null }).where(eq(channel.id, existing.id));
+  } else {
+    await db.insert(channel).values({ agentId, type: "telegram", status: "pending", externalRef: input.ref ?? null });
+  }
+  await enqueue(
+    QUEUE.reconfigureAgent,
+    { agentId, action: "connect", channel: "telegram", telegram: { tokenCipher, ref: input.ref } },
+    { singletonKey: agentId },
+  );
+  return row;
+}
+
+/** Disconnect Telegram from an agent (unset the secret + restart). */
+export async function disconnectTelegram(userId: string, agentId: string) {
+  const row = await getAgentForUser(userId, agentId);
+  if (!row) return null;
+  await db
+    .update(channel)
+    .set({ status: "pending" })
+    .where(and(eq(channel.agentId, agentId), eq(channel.type, "telegram")));
+  await enqueue(
+    QUEUE.reconfigureAgent,
+    { agentId, action: "disconnect", channel: "telegram" },
+    { singletonKey: agentId },
+  );
+  return row;
+}
+
 /** Channels for a set of agent ids (for the dashboard). */
 export async function channelsForAgents(agentIds: string[]) {
   if (agentIds.length === 0) return [];

@@ -8,6 +8,7 @@ import { decryptSecret } from "@agntos/core/crypto";
 import { db, desc, eq, sql, usageEvent } from "@agntos/db";
 
 import { AgentActions } from "@/components/dashboard/agent-actions";
+import { ChannelManager } from "@/components/dashboard/channel-manager";
 import { DashboardAccess } from "@/components/dashboard/dashboard-access";
 import { Card, Eyebrow, StatusChip } from "@/components/ui";
 import { channelsForAgents, getAgentForUser } from "@/lib/agents";
@@ -102,27 +103,12 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
               running={agent.status === "running"}
             />
           )}
-          {telegramRef ? (
-            <div className="flex items-center justify-between border-2 border-line bg-cloud px-3 py-2">
-              <span>
-                Telegram —{" "}
-                <span className="font-mono text-ink">@{telegramRef.replace(/^@/, "")}</span>
-              </span>
-              <a
-                href={`https://t.me/${telegramRef.replace(/^@/, "")}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 font-mono text-xs font-semibold text-ink hover:underline"
-              >
-                Open <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-            </div>
-          ) : (
-            <p className="text-muted">
-              No channel connected yet. Connect Telegram from onboarding, or use web chat once it&apos;s
-              enabled for your agent.
-            </p>
-          )}
+          <ChannelManager
+            agentId={agent.id}
+            status={(telegram?.status as "connected" | "pending" | "disconnected" | null) ?? null}
+            channelRef={telegramRef}
+            running={agent.status === "running"}
+          />
           {agent.status === "running" && agent.publicUrl ? (
             <div className="flex flex-wrap items-center justify-between gap-2 border-2 border-line bg-cloud px-3 py-2">
               <span>Quick chat — right here in AgntOS (no login needed)</span>

@@ -344,3 +344,26 @@ export async function removeFlyCertificate(appName: string, hostname: string): P
     log.warn("fly: removeCertificate failed", { app: appName, hostname, error: err });
   }
 }
+
+/** Set app secrets (take effect on the next machine start). */
+export async function setFlySecrets(appName: string, secrets: Record<string, string>): Promise<void> {
+  const entries = Object.entries(secrets).filter(([, v]) => v != null && v !== "");
+  if (entries.length === 0) return;
+  const err = await flyGraphql(
+    `mutation($input: SetSecretsInput!) { setSecrets(input: $input) { release { id } } }`,
+    { input: { appId: appName, secrets: entries.map(([key, value]) => ({ key, value })) } },
+  );
+  if (err) throw new Error(`Fly setSecrets failed: ${err}`);
+}
+
+/** Remove app secrets (take effect on the next machine start). Idempotent. */
+export async function unsetFlySecrets(appName: string, keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+  const err = await flyGraphql(
+    `mutation($input: UnsetSecretsInput!) { unsetSecrets(input: $input) { release { id } } }`,
+    { input: { appId: appName, keys } },
+  );
+  if (err && !/no.*secret|not.*set|not found/i.test(err)) {
+    throw new Error(`Fly unsetSecrets failed: ${err}`);
+  }
+}
