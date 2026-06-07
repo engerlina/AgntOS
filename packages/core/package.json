@@ -12,6 +12,7 @@
     "./email": "./src/email.ts",
     "./openrouter": "./src/openrouter.ts",
     "./crypto": "./src/crypto.ts",
+    "./cloudflare": "./src/cloudflare.ts",
     "./billing": "./src/billing/index.ts",
     "./provisioning": "./src/provisioning/index.ts",
     "./jobs": "./src/jobs.ts"

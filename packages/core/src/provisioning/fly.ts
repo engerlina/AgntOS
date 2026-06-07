@@ -119,16 +119,22 @@ export class FlyProvider implements AgentProvider {
         mounts: [{ volume: volume.id, path: input.volumeMountPath }],
         restart: { policy: "always" },
         auto_destroy: false,
-        // Expose Hermes' OpenAI-compatible API server (8642) on https so the
-        // AgntOS control plane can proxy browser chat to it.
         services: [
+          // 443 → Caddy basic-auth proxy → Hermes web dashboard (loopback). This
+          // is what <name>.agntos.net resolves to (per-agent cert added by worker).
           {
             protocol: "tcp",
-            internal_port: 8642,
+            internal_port: 8088,
             ports: [
               { port: 443, handlers: ["tls", "http"] },
               { port: 80, handlers: ["http"], force_https: true },
             ],
+          },
+          // 8642 → Hermes' OpenAI-compatible API server, for the in-AgntOS chat proxy.
+          {
+            protocol: "tcp",
+            internal_port: 8642,
+            ports: [{ port: 8642, handlers: ["tls", "http"] }],
           },
         ],
       },
@@ -301,4 +307,40 @@ export function flyAppName(agentId: string): string {
 /** Construct the provider configured from env, with a default region. */
 export function defaultFlyRegion(): string {
   return env().FLY_REGION;
+}
+
+async function flyGraphql(mutation: string, variables: Record<string, unknown>): Promise<string | null> {
+  const res = await fetch(GRAPHQL_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token()}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ query: mutation, variables }),
+  });
+  const json = (await res.json()) as { errors?: { message: string }[] };
+  return json.errors?.length ? json.errors.map((e) => e.message).join("; ") : null;
+}
+
+/** Provision a Let's Encrypt cert for `hostname` on the agent's app (HTTP-01). Idempotent. */
+export async function addFlyCertificate(appName: string, hostname: string): Promise<void> {
+  const err = await flyGraphql(
+    `mutation($appId: ID!, $hostname: String!) {
+      addCertificate(appId: $appId, hostname: $hostname) { certificate { hostname } }
+    }`,
+    { appId: appName, hostname },
+  );
+  if (err && !/already|exists|has a certificate/i.test(err)) {
+    throw new Error(`Fly addCertificate failed: ${err}`);
+  }
+}
+
+/** Remove a cert for `hostname` from the app. Idempotent (ignores "not found"). */
+export async function removeFlyCertificate(appName: string, hostname: string): Promise<void> {
+  const err = await flyGraphql(
+    `mutation($appId: ID!, $hostname: String!) {
+      deleteCertificate(appId: $appId, hostname: $hostname) { app { id } }
+    }`,
+    { appId: appName, hostname },
+  );
+  if (err && !/not found|does not exist|no certificate/i.test(err)) {
+    log.warn("fly: removeCertificate failed", { app: appName, hostname, error: err });
+  }
 }

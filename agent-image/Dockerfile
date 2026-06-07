@@ -15,6 +15,10 @@
 # Build + push is done in CI (.github/workflows/agent-image.yml) to GHCR; the
 # control plane launches a pinned tag via AGENT_IMAGE_REF.
 
+# Caddy binary — a basic-auth reverse proxy fronts the Hermes dashboard so AgntOS
+# controls access (the dashboard itself refuses public binds without an auth gate).
+FROM caddy:2.8-alpine AS caddysrc
+
 FROM python:3.11-slim
 
 # ── OS deps: headless Chromium for browser automation + the installer's needs ──
@@ -27,6 +31,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       chromium \
       fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
+
+# Caddy (static binary) for the dashboard auth proxy.
+COPY --from=caddysrc /usr/bin/caddy /usr/local/bin/caddy
 
 # Point Hermes/Playwright at the system Chromium (no extra download).
 ENV CHROME_BIN=/usr/bin/chromium \

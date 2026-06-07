@@ -68,12 +68,36 @@ if [ -n "${AGENT_PERSONALITY:-}" ]; then
   hermes config set system_prompt "${AGENT_PERSONALITY}" >/dev/null 2>&1 || true
 fi
 
-# ── Launch the messaging gateway (serves Telegram from TELEGRAM_BOT_TOKEN) ─────
-# `hermes gateway` reads channel tokens from env. If your build needs a one-time
-# non-interactive init first, add it here (e.g. `hermes setup --portal` flags).
+# ── Web dashboard: Hermes' own dashboard refuses to bind to a public address
+#    without an auth provider, but binds freely on loopback. So run it on
+#    127.0.0.1 and front it with Caddy basic-auth (AgntOS sets DASHBOARD_PASSWORD)
+#    on :8088 — that's the port Fly maps to <name>.agntos.net:443. Best-effort:
+#    if anything here fails, the agent (gateway) still runs. ─────────────────────
+if [ -n "${DASHBOARD_PASSWORD:-}" ] && command -v caddy >/dev/null 2>&1; then
+  DASH_HASH="$(caddy hash-password --plaintext "${DASHBOARD_PASSWORD}" 2>/dev/null || true)"
+  if [ -n "${DASH_HASH}" ]; then
+    {
+      echo "{"
+      echo "  auto_https off"
+      echo "  admin off"
+      echo "}"
+      echo ":8088 {"
+      echo "  basic_auth {"
+      echo "    ${DASHBOARD_USER:-agent} ${DASH_HASH}"
+      echo "  }"
+      echo "  reverse_proxy 127.0.0.1:9119"
+      echo "}"
+    } > /tmp/Caddyfile
+    echo "[agntos] starting Hermes dashboard (127.0.0.1:9119) + Caddy auth proxy (:8088)"
+    hermes dashboard --host 127.0.0.1 --port 9119 --no-open >/tmp/dashboard.log 2>&1 &
+    caddy run --config /tmp/Caddyfile --adapter caddyfile >/tmp/caddy.log 2>&1 &
+  fi
+fi
+
+# ── Launch the messaging gateway — this IS the agent. Foreground so its exit
+#    restarts the machine. `gateway run` also starts the OpenAI-compatible API
+#    server (port 8642) used by the in-AgntOS chat. ─────────────────────────────
 if command -v hermes >/dev/null 2>&1; then
-  # `gateway run` is the headless launch (per the Docker guide); it starts the
-  # messaging platforms AND the OpenAI-compatible API server when enabled.
   exec hermes gateway run
 else
   echo "[agntos] ERROR: 'hermes' not on PATH. Check the install step in the Dockerfile." >&2
