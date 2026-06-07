@@ -85,7 +85,11 @@ if [ -n "${DASHBOARD_PASSWORD:-}" ] && command -v caddy >/dev/null 2>&1; then
       echo "  basic_auth {"
       echo "    ${DASHBOARD_USER:-agent} ${DASH_HASH}"
       echo "  }"
-      echo "  reverse_proxy 127.0.0.1:9119"
+      echo "  reverse_proxy 127.0.0.1:9119 {"
+      # The dashboard validates the Host header against its bind address, so
+      # rewrite it to the loopback host:port the dashboard expects.
+      echo "    header_up Host 127.0.0.1:9119"
+      echo "  }"
       echo "}"
     } > /tmp/Caddyfile
     echo "[agntos] starting Hermes dashboard (127.0.0.1:9119) + Caddy auth proxy (:8088)"
