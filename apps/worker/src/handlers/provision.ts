@@ -1,6 +1,8 @@
+import { randomBytes } from "node:crypto";
+
 import { log, requireEnv, type ProvisionAgentJob } from "@agntos/core";
 import { getBalance } from "@agntos/core/billing";
-import { decryptSecret } from "@agntos/core/crypto";
+import { decryptSecret, encryptSecret } from "@agntos/core/crypto";
 import { createRuntimeKey, deleteRuntimeKey } from "@agntos/core/openrouter";
 import {
   defaultFlyRegion,
@@ -57,6 +59,11 @@ export async function handleProvision(data: ProvisionAgentJob): Promise<void> {
     });
     await db.update(agent).set({ openrouterKeyHash: key.hash }).where(eq(agent.id, row.id));
 
+    // Per-agent key for Hermes' API server. AgntOS proxies browser chat to the
+    // agent using this; stored encrypted so the web proxy can decrypt it.
+    const apiKey = `agk_${randomBytes(24).toString("hex")}`;
+    const webPasswordCipher = await encryptSecret(apiKey);
+
     // Decrypt the channel token (never persisted in plaintext anywhere).
     const telegramToken = data.telegram?.tokenCipher
       ? await decryptSecret(data.telegram.tokenCipher)
@@ -64,6 +71,7 @@ export async function handleProvision(data: ProvisionAgentJob): Promise<void> {
 
     const secrets: Record<string, string> = {
       OPENROUTER_API_KEY: key.key,
+      API_SERVER_KEY: apiKey,
       USER_ID: row.userId,
       AGENT_ID: row.id,
       ...(telegramToken ? { TELEGRAM_BOT_TOKEN: telegramToken } : {}),
@@ -99,6 +107,8 @@ export async function handleProvision(data: ProvisionAgentJob): Promise<void> {
         flyMachineId: result.machineId,
         flyVolumeId: result.volumeId,
         region: result.region,
+        publicUrl: `https://${flyAppName(row.id)}.fly.dev`,
+        webPasswordCipher,
         statusDetail: "Booting Hermes…",
         updatedAt: new Date(),
       })

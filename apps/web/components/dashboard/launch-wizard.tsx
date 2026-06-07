@@ -2,9 +2,10 @@
 
 import { ArrowLeft, ArrowRight, Rocket } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button, Card, Field, TextArea } from "@/components/ui";
+import { AGENT_DOMAIN, slugError, slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 
 const STEPS = ["Name", "Personality", "Connect", "Launch"] as const;
@@ -19,10 +20,37 @@ export function LaunchWizard() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // The agent's name IS its subdomain. Derive the handle + check availability live.
+  const slug = slugify(name);
+  const [slugState, setSlugState] = useState<{
+    checking: boolean;
+    available: boolean | null;
+    reason: string | null;
+  }>({ checking: false, available: null, reason: null });
+
+  useEffect(() => {
+    const err = slugError(slug);
+    if (err) {
+      setSlugState({ checking: false, available: false, reason: err });
+      return;
+    }
+    setSlugState((s) => ({ ...s, checking: true }));
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/agents/slug-available?slug=${encodeURIComponent(slug)}`);
+        const data = await res.json();
+        setSlugState({ checking: false, available: !!data.available, reason: data.reason ?? null });
+      } catch {
+        setSlugState({ checking: false, available: null, reason: null });
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [slug]);
+
   const canNext =
-    (step === 0 && name.trim().length > 0) ||
+    (step === 0 && name.trim().length > 0 && slugState.available === true) ||
     step === 1 ||
-    (step === 2 && botToken.trim().length > 20) ||
+    step === 2 || // Telegram is optional — web chat works without it
     step === 3;
 
   async function launch() {
@@ -34,9 +62,14 @@ export function LaunchWizard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
+          slug,
           personality: personality.trim() || undefined,
-          telegramBotToken: botToken.trim(),
-          telegramRef: botUsername.trim().replace(/^@/, "") || undefined,
+          ...(botToken.trim().length > 20
+            ? {
+                telegramBotToken: botToken.trim(),
+                telegramRef: botUsername.trim().replace(/^@/, "") || undefined,
+              }
+            : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -81,7 +114,11 @@ export function LaunchWizard() {
 
       {step === 0 && (
         <div className="space-y-4">
-          <h2 className="text-2xl">What&apos;s your agent called?</h2>
+          <h2 className="text-2xl">Name your agent</h2>
+          <p className="text-sm text-muted">
+            The name is also your agent&apos;s <strong>web address</strong>, where you&apos;ll chat
+            with it in the browser.
+          </p>
           <Field
             label="Agent name"
             value={name}
@@ -89,6 +126,25 @@ export function LaunchWizard() {
             placeholder="Jarvis"
             autoFocus
           />
+          {name.trim() && (
+            <div className="border-2 border-line bg-cloud px-3 py-2.5">
+              <p className="font-mono text-sm">
+                <span className="text-faint">Web address — </span>
+                <span className="font-semibold text-ink">
+                  {slug || "…"}.{AGENT_DOMAIN}
+                </span>
+              </p>
+              <p className="mt-1 font-mono text-xs">
+                {slugState.checking ? (
+                  <span className="text-faint">checking availability…</span>
+                ) : slugState.available === true ? (
+                  <span className="text-fern">✓ available</span>
+                ) : slugState.available === false ? (
+                  <span className="text-coral">✗ {slugState.reason ?? "unavailable"}</span>
+                ) : null}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -107,7 +163,13 @@ export function LaunchWizard() {
 
       {step === 2 && (
         <div className="space-y-4">
-          <h2 className="text-2xl">Connect Telegram</h2>
+          <h2 className="text-2xl">
+            Connect Telegram <span className="text-base font-normal text-faint">(optional)</span>
+          </h2>
+          <p className="text-sm text-muted">
+            You can skip this and chat in the browser, or connect Telegram (and more) later from the
+            agent page. To add it now:
+          </p>
           <ol className="space-y-1 border-2 border-line bg-cloud p-4 font-mono text-xs text-ink">
             <li>1. Open Telegram, message @BotFather</li>
             <li>2. Send /newbot and follow the prompts</li>
@@ -134,8 +196,12 @@ export function LaunchWizard() {
           <h2 className="text-2xl">Ready to launch</h2>
           <dl className="divide-y-2 divide-hair border-2 border-line">
             <Row label="Name" value={name || "—"} />
+            <Row label="Web address" value={`${slug}.${AGENT_DOMAIN}`} />
             <Row label="Personality" value={personality ? `${personality.slice(0, 60)}…` : "Default"} />
-            <Row label="Channel" value={botUsername ? `Telegram ${botUsername}` : "Telegram"} />
+            <Row
+              label="Channels"
+              value={botToken.trim().length > 20 ? `Web chat + Telegram` : "Web chat"}
+            />
           </dl>
           <p className="font-mono text-xs text-faint">
             We&apos;ll provision an isolated micro-VM, boot Hermes, mint a capped spend key, and your

@@ -104,12 +104,21 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
               enabled for your agent.
             </p>
           )}
-          <div className="flex items-center justify-between border-2 border-dashed border-hair px-3 py-2 text-faint">
-            <span>
-              Web chat — <span className="font-mono">{agent.name.toLowerCase().replace(/\s+/g, "-")}.agntos.net</span>
-            </span>
-            <span className="font-mono text-xs uppercase tracking-wide">coming soon</span>
-          </div>
+          {agent.status === "running" && agent.publicUrl ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-2 border-line bg-cloud px-3 py-2">
+              <span>
+                Web chat{agent.slug ? <> — <span className="font-mono text-ink">{agent.slug}.agntos.net</span></> : null}
+              </span>
+              <Link href={`/dashboard/agents/${agent.id}/chat`} className="btn btn-primary">
+                Open web chat
+              </Link>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between border-2 border-dashed border-hair px-3 py-2 text-faint">
+              <span>Web chat{agent.slug ? ` — ${agent.slug}.agntos.net` : ""}</span>
+              <span className="font-mono text-xs uppercase tracking-wide">when running</span>
+            </div>
+          )}
         </div>
       </Card>
 

@@ -90,6 +90,10 @@ export class FlyProvider implements AgentProvider {
     // 1. App (idempotent — ignore "already exists").
     await this.createApp(app);
 
+    // 1b. Allocate a shared IPv4 + IPv6 so the app is reachable at <app>.fly.dev
+    //     (for the exposed Hermes API server). Idempotent.
+    await this.allocateSharedIp(app);
+
     // 2. Volume for memory + skills.
     const volume = await this.createVolume(app, {
       name: input.volumeName,
@@ -115,6 +119,18 @@ export class FlyProvider implements AgentProvider {
         mounts: [{ volume: volume.id, path: input.volumeMountPath }],
         restart: { policy: "always" },
         auto_destroy: false,
+        // Expose Hermes' OpenAI-compatible API server (8642) on https so the
+        // AgntOS control plane can proxy browser chat to it.
+        services: [
+          {
+            protocol: "tcp",
+            internal_port: 8642,
+            ports: [
+              { port: 443, handlers: ["tls", "http"] },
+              { port: 80, handlers: ["http"], force_https: true },
+            ],
+          },
+        ],
       },
     });
 
@@ -249,6 +265,31 @@ export class FlyProvider implements AgentProvider {
     if (json.errors?.length) {
       throw new Error(`Fly setSecrets failed: ${json.errors.map((e) => e.message).join("; ")}`);
     }
+  }
+
+  /** Allocate a shared IPv4 + IPv6 so the app routes at <app>.fly.dev. Idempotent. */
+  private async allocateSharedIp(appName: string): Promise<void> {
+    const mutation = `
+      mutation($input: AllocateIPAddressInput!) {
+        allocateIpAddress(input: $input) { ipAddress { address type } }
+      }`;
+    const alloc = async (type: "shared_v4" | "v6") => {
+      const res = await fetch(GRAPHQL_URL, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token()}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ query: mutation, variables: { input: { appId: appName, type } } }),
+      });
+      const json = (await res.json()) as { errors?: { message: string }[] };
+      if (json.errors?.length) {
+        const msg = json.errors.map((e) => e.message).join("; ");
+        // "already allocated / in use" → fine (idempotent retry); else just warn.
+        if (!/already|exists|in use/i.test(msg)) {
+          log.warn("fly: allocateIpAddress failed", { app: appName, type, error: msg });
+        }
+      }
+    };
+    await alloc("shared_v4");
+    await alloc("v6");
   }
 }
 

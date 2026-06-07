@@ -64,9 +64,20 @@ export async function getAgentForUser(userId: string, agentId: string) {
 
 export interface CreateAgentInput {
   name: string;
+  slug: string;
   personality?: string;
   tier: AgentTier;
   telegram?: { botToken: string; ref?: string };
+}
+
+/** Whether an agent handle (subdomain) is free. */
+export async function slugAvailable(slug: string): Promise<boolean> {
+  const [existing] = await db
+    .select({ id: agent.id })
+    .from(agent)
+    .where(eq(agent.slug, slug))
+    .limit(1);
+  return !existing;
 }
 
 /**
@@ -80,6 +91,7 @@ export async function createAndProvisionAgent(userId: string, input: CreateAgent
     .values({
       userId,
       name: input.name,
+      slug: input.slug,
       personality: input.personality,
       tier: input.tier,
       model: PLANS[input.tier].modelMode,

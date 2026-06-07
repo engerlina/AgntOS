@@ -52,14 +52,17 @@ export function AgentCard({ agent }: { agent: AgentView }) {
   const chatUrl = agent.telegramRef ? `https://t.me/${agent.telegramRef.replace(/^@/, "")}` : null;
 
   return (
-    <Card large className="flex flex-col">
+    <Card large className="relative flex flex-col transition-transform hover:-translate-y-0.5">
+      {/* Stretched link: the whole card opens the detail page; the action row
+          below sits above this overlay (z-10) so its buttons stay clickable. */}
+      <Link
+        href={`/dashboard/agents/${agent.id}`}
+        aria-label={`Open ${agent.name}`}
+        className="absolute inset-0 z-0"
+      />
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-2xl">
-            <Link href={`/dashboard/agents/${agent.id}`} className="no-underline hover:underline">
-              {agent.name}
-            </Link>
-          </h3>
+          <h3 className="text-2xl">{agent.name}</h3>
           <p className="mt-1 font-mono text-xs uppercase tracking-widest text-faint">
             {agent.tier} · {agent.model} model{agent.region ? ` · ${agent.region}` : ""}
           </p>
@@ -79,7 +82,7 @@ export function AgentCard({ agent }: { agent: AgentView }) {
         </p>
       )}
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="relative z-10 mt-6 flex flex-wrap gap-2">
         {chatUrl && (
           <a
             href={chatUrl}
