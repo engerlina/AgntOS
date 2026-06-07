@@ -122,6 +122,17 @@ export async function handleProvision(data: ProvisionAgentJob): Promise<void> {
     const healthy = await pollHealth(provider, ref, 120_000);
     if (!healthy) throw new Error("Agent did not report healthy within 120s");
 
+    // The machine is up, but Hermes takes a few minutes to initialise its API
+    // server on first boot. Wait until it actually serves before we say "running"
+    // so the dashboard doesn't offer chat before it works.
+    await setStatus(row.id, "provisioning", "Starting Hermes (first boot takes a few minutes)…");
+    const apiReady = await pollApiReady(`https://${flyAppName(row.id)}.fly.dev`, apiKey, 480_000);
+    if (!apiReady) {
+      log.warn("provision: API not ready within timeout; marking running anyway", {
+        agentId: row.id,
+      });
+    }
+
     await setStatus(row.id, "running", null);
     if (data.telegram) {
       await db.update(channel).set({ status: "connected" }).where(eq(channel.agentId, row.id));
@@ -177,4 +188,22 @@ async function pollHealth(
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+/** Poll the agent's Hermes API server until it actually serves (or times out). */
+async function pollApiReady(publicUrl: string, apiKey: string, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`${publicUrl}/v1/models`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.ok) return true;
+    } catch {
+      // not up yet
+    }
+    await sleep(15_000);
+  }
+  return false;
 }
