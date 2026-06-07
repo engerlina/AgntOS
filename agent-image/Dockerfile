@@ -61,6 +61,13 @@ ENV PATH="/home/hermes/.local/bin:${PATH}"
 # code) lands under ~/.hermes/.
 RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
 
+# Pre-build the dashboard web UI now (full CPU/RAM at image-build time) so first
+# boot doesn't stall building it under contention with the gateway init. The
+# dashboard builds its frontend on first launch; we trigger that here, then stop.
+# Best-effort: `|| true` since the process is killed by timeout once it's built.
+RUN timeout 200 hermes dashboard --host 127.0.0.1 --port 9119 --no-open >/tmp/dashbuild.log 2>&1 || true; \
+    tail -6 /tmp/dashbuild.log 2>/dev/null || true
+
 # Bake the installed ~/.hermes as a SEED, then empty the mount point. At runtime
 # the Fly volume mounts over ~/.hermes (hiding any image content), so the
 # entrypoint seeds the volume from /opt/hermes-seed on first boot — persisting the
