@@ -1,0 +1,1 @@
+ALTER TABLE "agent" ADD COLUMN "dashboard_password_cipher" text;

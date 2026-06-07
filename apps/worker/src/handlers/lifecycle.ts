@@ -5,6 +5,7 @@ import {
   type ResizeAgentJob,
   type ResumeAgentJob,
 } from "@agntos/core";
+import { deleteAgentDns, isCloudflareConfigured } from "@agntos/core/cloudflare";
 import { deleteRuntimeKey, setRuntimeKeyDisabled } from "@agntos/core/openrouter";
 import { getProvider, type AgentRef } from "@agntos/core/provisioning";
 import { agent, auditLog, db, eq } from "@agntos/db";
@@ -69,6 +70,12 @@ export async function handleDestroy(data: DestroyAgentJob): Promise<void> {
   const ref = refOf(row);
   if (ref) {
     await getProvider().destroy(ref);
+  }
+  // Remove the per-agent subdomain DNS record (the Fly cert dies with the app).
+  if (row.slug && isCloudflareConfigured()) {
+    await deleteAgentDns(row.slug).catch((e) =>
+      log.warn("destroy: DNS delete failed", { agentId: row.id, error: String(e) }),
+    );
   }
   if (row.openrouterKeyHash) {
     await deleteRuntimeKey(row.openrouterKeyHash).catch((e) =>

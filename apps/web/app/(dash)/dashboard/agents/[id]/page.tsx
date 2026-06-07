@@ -4,9 +4,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { formatUsd } from "@agntos/core";
+import { decryptSecret } from "@agntos/core/crypto";
 import { db, desc, eq, sql, usageEvent } from "@agntos/db";
 
 import { AgentActions } from "@/components/dashboard/agent-actions";
+import { DashboardAccess } from "@/components/dashboard/dashboard-access";
 import { Card, Eyebrow, StatusChip } from "@/components/ui";
 import { channelsForAgents, getAgentForUser } from "@/lib/agents";
 import { requireUser } from "@/lib/session";
@@ -18,6 +20,16 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const agent = await getAgentForUser(user.id, id);
   if (!agent) notFound();
+
+  // Dashboard login is shown only to the owner (this page is auth-gated).
+  let dashboardPassword: string | null = null;
+  if (agent.status === "running" && agent.slug && agent.dashboardPasswordCipher) {
+    try {
+      dashboardPassword = await decryptSecret(agent.dashboardPasswordCipher);
+    } catch {
+      dashboardPassword = null;
+    }
+  }
 
   const [channels, spend, recent] = await Promise.all([
     channelsForAgents([id]),
@@ -83,6 +95,13 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
       <Card className="mt-6">
         <Eyebrow>Access</Eyebrow>
         <div className="mt-3 space-y-3 text-sm">
+          {agent.slug && (
+            <DashboardAccess
+              slug={agent.slug}
+              password={dashboardPassword}
+              running={agent.status === "running"}
+            />
+          )}
           {telegramRef ? (
             <div className="flex items-center justify-between border-2 border-line bg-cloud px-3 py-2">
               <span>
@@ -106,16 +125,14 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
           )}
           {agent.status === "running" && agent.publicUrl ? (
             <div className="flex flex-wrap items-center justify-between gap-2 border-2 border-line bg-cloud px-3 py-2">
-              <span>
-                Web chat{agent.slug ? <> — <span className="font-mono text-ink">{agent.slug}.agntos.net</span></> : null}
-              </span>
+              <span>Quick chat — right here in AgntOS (no login needed)</span>
               <Link href={`/dashboard/agents/${agent.id}/chat`} className="btn btn-primary">
-                Open web chat
+                Open chat
               </Link>
             </div>
           ) : (
             <div className="flex items-center justify-between border-2 border-dashed border-hair px-3 py-2 text-faint">
-              <span>Web chat{agent.slug ? ` — ${agent.slug}.agntos.net` : ""}</span>
+              <span>Quick chat (in AgntOS)</span>
               <span className="font-mono text-xs uppercase tracking-wide">when running</span>
             </div>
           )}

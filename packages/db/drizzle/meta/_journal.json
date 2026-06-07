@@ -15,6 +15,13 @@
       "when": 1780834377108,
       "tag": "0001_nappy_supernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780863797007,
+      "tag": "0002_useful_greymalkin",
+      "breakpoints": true
     }
   ]
 }

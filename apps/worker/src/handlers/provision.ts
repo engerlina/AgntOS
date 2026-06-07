@@ -2,9 +2,11 @@ import { randomBytes } from "node:crypto";
 
 import { log, requireEnv, type ProvisionAgentJob } from "@agntos/core";
 import { getBalance } from "@agntos/core/billing";
+import { AGENT_DOMAIN, isCloudflareConfigured, upsertAgentDns } from "@agntos/core/cloudflare";
 import { decryptSecret, encryptSecret } from "@agntos/core/crypto";
 import { createRuntimeKey, deleteRuntimeKey } from "@agntos/core/openrouter";
 import {
+  addFlyCertificate,
   defaultFlyRegion,
   flyAppName,
   getProvider,
@@ -64,6 +66,11 @@ export async function handleProvision(data: ProvisionAgentJob): Promise<void> {
     const apiKey = `agk_${randomBytes(24).toString("hex")}`;
     const webPasswordCipher = await encryptSecret(apiKey);
 
+    // AgntOS-controlled basic-auth password for the agent's Hermes dashboard
+    // (Caddy fronts the dashboard with this; shown to the owner in the UI).
+    const dashboardPassword = randomBytes(9).toString("base64url");
+    const dashboardPasswordCipher = await encryptSecret(dashboardPassword);
+
     // Decrypt the channel token (never persisted in plaintext anywhere).
     const telegramToken = data.telegram?.tokenCipher
       ? await decryptSecret(data.telegram.tokenCipher)
@@ -72,6 +79,7 @@ export async function handleProvision(data: ProvisionAgentJob): Promise<void> {
     const secrets: Record<string, string> = {
       OPENROUTER_API_KEY: key.key,
       API_SERVER_KEY: apiKey,
+      DASHBOARD_PASSWORD: dashboardPassword,
       USER_ID: row.userId,
       AGENT_ID: row.id,
       ...(telegramToken ? { TELEGRAM_BOT_TOKEN: telegramToken } : {}),
@@ -100,6 +108,9 @@ export async function handleProvision(data: ProvisionAgentJob): Promise<void> {
       volumeMountPath: HERMES_DATA_PATH,
     });
 
+    // The API server (for the in-AgntOS chat) is on :8642; :443 serves the
+    // Hermes dashboard via Caddy at <slug>.agntos.net.
+    const apiUrl = `https://${flyAppName(row.id)}.fly.dev:8642`;
     await db
       .update(agent)
       .set({
@@ -107,12 +118,27 @@ export async function handleProvision(data: ProvisionAgentJob): Promise<void> {
         flyMachineId: result.machineId,
         flyVolumeId: result.volumeId,
         region: result.region,
-        publicUrl: `https://${flyAppName(row.id)}.fly.dev`,
+        publicUrl: apiUrl,
         webPasswordCipher,
+        dashboardPasswordCipher,
         statusDetail: "Booting Hermes…",
         updatedAt: new Date(),
       })
       .where(eq(agent.id, row.id));
+
+    // Per-agent subdomain: <slug>.agntos.net → this app, with a Fly-issued cert
+    // (HTTP-01). Best-effort — the agent still works via the in-AgntOS chat if
+    // DNS/cert provisioning lags.
+    if (row.slug && isCloudflareConfigured()) {
+      const host = `${row.slug}.${AGENT_DOMAIN}`;
+      try {
+        await upsertAgentDns(row.slug, `${flyAppName(row.id)}.fly.dev`);
+        await addFlyCertificate(flyAppName(row.id), host);
+        log.info("provision: subdomain wired", { agentId: row.id, host });
+      } catch (e) {
+        log.warn("provision: subdomain setup failed", { agentId: row.id, error: String(e) });
+      }
+    }
 
     const ref: AgentRef = {
       appId: result.appId,
@@ -126,7 +152,7 @@ export async function handleProvision(data: ProvisionAgentJob): Promise<void> {
     // server on first boot. Wait until it actually serves before we say "running"
     // so the dashboard doesn't offer chat before it works.
     await setStatus(row.id, "provisioning", "Starting Hermes (first boot takes a few minutes)…");
-    const apiReady = await pollApiReady(`https://${flyAppName(row.id)}.fly.dev`, apiKey, 480_000);
+    const apiReady = await pollApiReady(apiUrl, apiKey, 480_000);
     if (!apiReady) {
       log.warn("provision: API not ready within timeout; marking running anyway", {
         agentId: row.id,

@@ -58,11 +58,14 @@ export const agent = pgTable(
     ramMb: integer("ram_mb").notNull().default(2048),
     // The per-user OpenRouter key hash (NOT the secret — secret lives in Fly).
     openrouterKeyHash: text("openrouter_key_hash"),
-    // Web access: the agent's handle (== subdomain), public URL, and the
-    // encrypted basic-auth password for its Hermes dashboard.
+    // Web access: the agent's handle (== subdomain) + public URL.
     slug: text("slug").unique(),
     publicUrl: text("public_url"),
+    // Encrypted API_SERVER_KEY (the in-AgntOS chat proxy decrypts this).
     webPasswordCipher: text("web_password_cipher"),
+    // Encrypted basic-auth password for the agent's Hermes dashboard at
+    // <slug>.agntos.net (shown to the owner; set on Caddy via a Fly secret).
+    dashboardPasswordCipher: text("dashboard_password_cipher"),
     // Free-form provider/status detail for the dashboard + debugging.
     statusDetail: text("status_detail"),
     createdAt: timestamp("created_at", { withTimezone: true })
