@@ -55,7 +55,8 @@ fi
 } > "${HERMES_HOME}/.env"
 chmod 600 "${HERMES_HOME}/.env" 2>/dev/null || true
 # Also export (Hermes reads API_SERVER_* from process env via os.getenv).
-export API_SERVER_ENABLED=true API_SERVER_HOST=0.0.0.0 API_SERVER_PORT=8642 API_SERVER_CORS_ORIGINS="*"
+# PYTHONUNBUFFERED so Hermes' logs flush to `fly logs` for debugging.
+export API_SERVER_ENABLED=true API_SERVER_HOST=0.0.0.0 API_SERVER_PORT=8642 API_SERVER_CORS_ORIGINS="*" PYTHONUNBUFFERED=1
 
 echo "[agntos] booting agent ${AGENT_ID:-?} (${AGENT_NAME:-Agent}) model=${HERMES_INFERENCE_MODEL} channel=${CHANNEL:-none}"
 
