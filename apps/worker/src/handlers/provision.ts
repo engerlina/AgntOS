@@ -91,6 +91,8 @@ export async function handleProvision(data: ProvisionAgentJob): Promise<void> {
       MODEL_MODE: row.model,
       ...(row.personality ? { AGENT_PERSONALITY: row.personality } : {}),
       ...(data.telegram ? { CHANNEL: "telegram" } : {}),
+      // Lets the Hermes dashboard accept its public host + scope cookies correctly.
+      ...(row.slug ? { HERMES_DASHBOARD_PUBLIC_URL: `https://${row.slug}.${AGENT_DOMAIN}` } : {}),
     };
 
     const provider = getProvider();

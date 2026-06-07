@@ -86,14 +86,19 @@ if [ -n "${DASHBOARD_PASSWORD:-}" ] && command -v caddy >/dev/null 2>&1; then
       echo "    ${DASHBOARD_USER:-agent} ${DASH_HASH}"
       echo "  }"
       echo "  reverse_proxy 127.0.0.1:9119 {"
-      # The dashboard validates the Host header against its bind address, so
-      # rewrite it to the loopback host:port the dashboard expects.
-      echo "    header_up Host 127.0.0.1:9119"
+      # Forward the ORIGINAL Host (do NOT rewrite) so the dashboard scopes its
+      # session cookie to <slug>.agntos.net; tell it the edge is HTTPS so the
+      # cookie gets Secure. The host guard is handled by HERMES_DASHBOARD_PUBLIC_URL.
+      echo "    header_up X-Forwarded-Proto https"
       echo "  }"
       echo "}"
     } > /tmp/Caddyfile
-    echo "[agntos] starting Hermes dashboard (127.0.0.1:9119) + Caddy auth proxy (:8088)"
-    hermes dashboard --host 127.0.0.1 --port 9119 --no-open >/tmp/dashboard.log 2>&1 &
+    echo "[agntos] starting Hermes dashboard (:9119) + Caddy auth proxy (:8088)"
+    # Bind 0.0.0.0 + --insecure: the dashboard's own auth gate is OFF because Caddy
+    # basic-auth is the real gate and :9119 is NOT exposed by Fly (only :8088→443).
+    # HERMES_DASHBOARD_PUBLIC_URL (set by the worker) satisfies the Host guard and
+    # scopes cookies to the public domain.
+    hermes dashboard --host 0.0.0.0 --port 9119 --no-open --insecure >/tmp/dashboard.log 2>&1 &
     caddy run --config /tmp/Caddyfile --adapter caddyfile >/tmp/caddy.log 2>&1 &
   fi
 fi
