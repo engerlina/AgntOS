@@ -1,6 +1,7 @@
 "use client";
 
 import { ExternalLink, Loader2, Pause, Play, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
@@ -54,7 +55,11 @@ export function AgentCard({ agent }: { agent: AgentView }) {
     <Card large className="flex flex-col">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-2xl">{agent.name}</h3>
+          <h3 className="text-2xl">
+            <Link href={`/dashboard/agents/${agent.id}`} className="no-underline hover:underline">
+              {agent.name}
+            </Link>
+          </h3>
           <p className="mt-1 font-mono text-xs uppercase tracking-widest text-faint">
             {agent.tier} · {agent.model} model{agent.region ? ` · ${agent.region}` : ""}
           </p>
