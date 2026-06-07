@@ -29,8 +29,11 @@ fi
 # Swap these OpenRouter slugs for your curated Standard/Smart choices.
 if [ -z "${HERMES_INFERENCE_MODEL:-}" ]; then
   case "${MODEL_MODE:-standard}" in
+    # Premium tier: a fixed strong model for predictable behaviour.
     smart) export HERMES_INFERENCE_MODEL="anthropic/claude-sonnet-4" ;;
-    *)     export HERMES_INFERENCE_MODEL="openai/gpt-4o-mini" ;;
+    # Default tier: OpenRouter's auto-router picks a suitable model per request
+    # (spend is capped by the per-agent OpenRouter key).
+    *)     export HERMES_INFERENCE_MODEL="openrouter/auto" ;;
   esac
 fi
 

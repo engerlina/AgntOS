@@ -16,7 +16,12 @@ export function DashboardAccess({
   password: string | null;
   running: boolean;
 }) {
-  const url = `https://${slug}.agntos.net`;
+  const url = `https://${slug}.agntos.net/chat`;
+  // Deep-link with the credentials so clicking from AgntOS logs the owner straight
+  // in (no browser auth modal) and lands on the Chat tab.
+  const directUrl = password
+    ? `https://agent:${encodeURIComponent(password)}@${slug}.agntos.net/chat`
+    : url;
   const [reveal, setReveal] = useState(false);
   const [copied, setCopied] = useState<"user" | "pass" | null>(null);
 
@@ -46,7 +51,7 @@ export function DashboardAccess({
           Hermes dashboard — <span className="font-mono text-ink">{slug}.agntos.net</span>
         </span>
         <a
-          href={url}
+          href={directUrl}
           target="_blank"
           rel="noreferrer"
           className="btn btn-primary inline-flex items-center gap-1"
