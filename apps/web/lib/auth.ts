@@ -4,7 +4,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 
 import { env, hasEnv, log, stripePlanConfig } from "@agntos/core";
-import { ensureWallet } from "@agntos/core/billing";
+import { COMP_CREDITS_MC, ensureWallet, grantCredits, isCompEmail } from "@agntos/core/billing";
 import { sendEmail } from "@agntos/core/email";
 import { stripe as stripeClient } from "@agntos/core/stripe";
 import { account, db, session, subscription, user, verification } from "@agntos/db";
@@ -81,6 +81,15 @@ export const auth = betterAuth({
           // Provision a wallet + welcome the user as soon as the account exists.
           try {
             await ensureWallet(u.id);
+            // Comped accounts get free credits so AgntOS covers their model spend.
+            if (isCompEmail(u.email)) {
+              await grantCredits({
+                userId: u.id,
+                amountMc: COMP_CREDITS_MC,
+                meta: { reason: "comp_signup" },
+              });
+              log.info("comp credits granted", { userId: u.id });
+            }
             await sendEmail.welcome(u.email, u.name ?? undefined);
           } catch (err) {
             log.error("post-signup hook failed", { userId: u.id, error: String(err) });

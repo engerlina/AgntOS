@@ -1,5 +1,5 @@
 import { env, log, QUEUE, ramForTier } from "@agntos/core";
-import { PLANS } from "@agntos/core/billing";
+import { COMP_TIER, isCompEmail, PLANS } from "@agntos/core/billing";
 import { encryptSecret } from "@agntos/core/crypto";
 import {
   agent,
@@ -11,6 +11,7 @@ import {
   eq,
   inArray,
   subscription,
+  user,
   type AgentTier,
 } from "@agntos/db";
 
@@ -22,6 +23,14 @@ import { enqueue } from "./boss";
  * in production an active/trialing subscription is required.
  */
 export async function getActiveTier(userId: string): Promise<AgentTier | null> {
+  // Comped accounts can launch without a paid subscription.
+  const [u] = await db
+    .select({ email: user.email })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  if (isCompEmail(u?.email)) return COMP_TIER;
+
   const [sub] = await db
     .select({ plan: subscription.plan, status: subscription.status })
     .from(subscription)

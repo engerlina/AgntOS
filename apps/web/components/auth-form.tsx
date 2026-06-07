@@ -101,6 +101,17 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         hint={mode === "signup" ? "At least 8 characters." : undefined}
       />
 
+      {mode === "login" && (
+        <div className="-mt-1 text-right">
+          <Link
+            href="/forgot-password"
+            className="font-mono text-xs font-semibold text-ink hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
+      )}
+
       {error && (
         <p className="border-2 border-coral bg-coral/20 px-3 py-2 font-mono text-xs text-ink">
           {error}
