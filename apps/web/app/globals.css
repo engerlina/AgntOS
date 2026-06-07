@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+/*
+  Brutalist theme, ported from D:\Websites\AINeverSleeps\website (theme.json):
+    ink   #1d1d1d   lime #dcf986   coral #e06666   fern #5ea977
+    body  #ffffff   text #464646   borders are hard + ink, shadows are offset.
+  Type: IBM Plex Mono for headings/labels, Montserrat for body.
+*/
+@theme {
+  --color-ink: #1d1d1d;
+  --color-paper: #ffffff;
+  --color-cloud: #fafafa;
+  --color-lime: #dcf986;
+  --color-lime-deep: #c9ec5f;
+  --color-coral: #e06666;
+  --color-fern: #5ea977;
+  --color-line: #1d1d1d; /* brutalist hard border == ink */
+  --color-hair: #e0e0e0; /* soft divider only */
+  --color-muted: #464646; /* body text */
+  --color-faint: #8a8a8a;
+
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, monospace;
+
+  --shadow-brutal: 4px 4px 0 0 #1d1d1d;
+  --shadow-brutal-lg: 6px 6px 0 0 #1d1d1d;
+  --shadow-brutal-sm: 2px 2px 0 0 #1d1d1d;
+
+  --radius-none: 0px;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-paper text-muted antialiased;
+    font-family: var(--font-sans);
+    line-height: 1.7;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-mono);
+    @apply text-ink font-semibold tracking-tight;
+    line-height: 1.1;
+  }
+  ::selection {
+    background: var(--color-lime);
+    color: var(--color-ink);
+  }
+  a {
+    @apply underline-offset-4;
+  }
+}
+
+@layer components {
+  /* Hard-edged card with offset shadow — the brutalist signature. */
+  .brutal-card {
+    @apply border-2 border-line bg-paper;
+    box-shadow: var(--shadow-brutal);
+  }
+  .brutal-card-lg {
+    @apply border-2 border-line bg-paper;
+    box-shadow: var(--shadow-brutal-lg);
+  }
+
+  /* Buttons: square, bordered, offset shadow that "presses" on active. */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 border-2 border-line
+      px-5 py-2.5 font-mono text-sm font-semibold no-underline
+      transition-transform duration-75;
+    box-shadow: var(--shadow-brutal-sm);
+  }
+  .btn:hover {
+    @apply -translate-x-px -translate-y-px;
+    box-shadow: var(--shadow-brutal);
+  }
+  .btn:active {
+    @apply translate-x-0 translate-y-0;
+    box-shadow: none;
+  }
+  .btn-primary {
+    @apply bg-lime text-ink;
+  }
+  .btn-dark {
+    @apply bg-ink text-lime;
+  }
+  .btn-ghost {
+    @apply bg-paper text-ink;
+  }
+  .btn-danger {
+    @apply bg-coral text-ink;
+  }
+  .btn[disabled],
+  .btn[aria-disabled="true"] {
+    @apply cursor-not-allowed opacity-50;
+    box-shadow: none;
+  }
+
+  /* Inputs */
+  .field {
+    @apply w-full border-2 border-line bg-paper px-3.5 py-2.5 font-sans text-ink
+      outline-none placeholder:text-faint;
+  }
+  .field:focus {
+    @apply border-ink;
+    box-shadow: var(--shadow-brutal-sm);
+  }
+  .label {
+    @apply mb-1.5 block font-mono text-xs font-semibold uppercase tracking-widest text-ink;
+  }
+
+  /* Status chips */
+  .chip {
+    @apply inline-flex items-center gap-1.5 border-2 border-line px-2.5 py-1
+      font-mono text-xs font-semibold uppercase tracking-wide;
+  }
+
+  /* Section label / eyebrow */
+  .eyebrow {
+    @apply font-mono text-xs font-semibold uppercase tracking-[0.2em] text-muted;
+  }
+}

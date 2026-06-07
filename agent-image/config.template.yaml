@@ -1,0 +1,55 @@
+# AgntOS baked model policy for Hermes (~/.hermes/config.yaml).
+#
+# Operator-controlled: users NEVER see a model name. `entrypoint.sh` substitutes
+# ${MAIN_MODEL} from the agent's tier (Standard vs Smart). Everything else is
+# fixed so cost is predictable and support is trivial.
+#
+# The biggest cost lever is the eight auxiliary slots: Hermes sends 6–20K tokens
+# of tool definitions on every call, plus extra calls for its learning loop and
+# compression — so all side tasks point at cheap models.
+#
+# ⚠️ Field names mirror the documented Hermes config shape; reconcile with the
+# pinned Hermes release. Model slugs are OpenRouter ids — swap to taste.
+
+provider:
+  # Hermes talks to OpenRouter directly with the per-user capped key. The cap IS
+  # the spend limit (hard stop), enforced by OpenRouter — no proxy here.
+  type: openrouter
+  base_url: https://openrouter.ai/api/v1
+  api_key_env: OPENROUTER_API_KEY
+
+# Main reasoning model + the tool-call loop. Set per tier by entrypoint.sh.
+main_model: ${MAIN_MODEL}
+
+# Eight auxiliary slots — all cheap. These dominate token volume.
+auxiliary_models:
+  compression: deepseek/deepseek-chat # context compression / summarisation
+  vision: google/gemini-flash-1.5 # image understanding
+  session_title: google/gemini-flash-1.5 # naming sessions
+  web_summarization: deepseek/deepseek-chat # summarising fetched pages
+  memory_extraction: deepseek/deepseek-chat # writing long-term memory
+  skill_synthesis: deepseek/deepseek-chat # drafting self-written skills
+  classification: google/gemini-flash-1.5 # routing / intent
+  embedding: openai/text-embedding-3-small # vector memory
+
+# Optional: OpenRouter Pareto Code Router for coding tasks — picks the cheapest
+# model that clears the quality bar. Fixed threshold = predictable spend.
+pareto_router:
+  enabled: true
+  task: coding
+  min_coding_score: 0.7
+
+# Persistent state (mounted Fly volume). Memory + skills survive restarts.
+data_dir: /home/hermes/.hermes
+memory:
+  enabled: true
+  path: /home/hermes/.hermes/memory
+skills:
+  enabled: true
+  path: /home/hermes/.hermes/skills
+
+# Channel is configured at boot from env (see entrypoint.sh).
+channels:
+  telegram:
+    enabled: ${TELEGRAM_ENABLED}
+    bot_token_env: TELEGRAM_BOT_TOKEN
