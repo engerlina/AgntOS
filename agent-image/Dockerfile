@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       curl \
       git \
       tini \
+      xz-utils \
       chromium \
       fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
@@ -50,6 +51,13 @@ ENV PATH="/home/hermes/.local/bin:${PATH}"
 
 # ── Install Hermes (installs uv + Python deps, clones the repo, adds `hermes`) ──
 RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+
+# Diagnostic: surface where the installer placed the `hermes` executable + bins,
+# so we can set PATH correctly and (next) seed the data volume. Never fails build.
+RUN echo "--- ~/.hermes/bin ---"; ls -la /home/hermes/.hermes/bin 2>/dev/null | head -40 || true; \
+    echo "--- ~/.local/bin ---"; ls -la /home/hermes/.local/bin 2>/dev/null | head -40 || true; \
+    echo "--- find hermes ---"; find /home/hermes -maxdepth 5 -name hermes 2>/dev/null | head || true; \
+    echo "--- shell rc PATH edits ---"; grep -hRE "PATH|hermes" /home/hermes/.bashrc /home/hermes/.profile 2>/dev/null | head || true
 
 # Persistent memory + self-written skills (Fly volume mounts over this path).
 VOLUME ["/home/hermes/.hermes"]
