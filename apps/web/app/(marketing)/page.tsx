@@ -1,14 +1,13 @@
 import {
-  Bot,
   Brain,
   Check,
-  Gauge,
-  Globe,
+  ListChecks,
   Lock,
   MessageSquare,
   Rocket,
   Sparkles,
   Wallet,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -23,23 +22,20 @@ export default function LandingPage() {
       <section className="border-b-2 border-line bg-cloud">
         <div className="mx-auto grid max-w-6xl gap-12 px-5 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:py-28">
           <div>
-            <Eyebrow>One agent · its own machine · live in minutes</Eyebrow>
+            <Eyebrow>Your personal AI assistant</Eyebrow>
             <h1 className="mt-4 text-4xl sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]">
-              Stop renting a chatbot.
+              Most AI forgets you.
               <br />
-              <span className="bg-lime px-2">Own an agent.</span>
+              <span className="bg-lime px-2">This one remembers.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg">
-              AgntOS launches a private{" "}
-              <span className="font-mono font-semibold text-ink">Hermes</span> agent on its own
-              isolated machine — at your own{" "}
-              <span className="font-mono font-semibold text-ink">name.agntos.net</span>. It
-              remembers everything, writes its own skills, and works while you sleep. No servers, no
-              model-wrangling, no surprise bills.
+              AgntOS gives you a personal AI assistant that learns how you work, remembers every
+              conversation, and quietly handles the busywork — on the web or right in your messages.
+              It&apos;s private to you, ready in minutes, with nothing to install.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <ButtonLink href="/signup" variant="dark" className="text-base">
-                Launch your agent →
+                Get your assistant →
               </ButtonLink>
               <ButtonLink href="#how" variant="ghost" className="text-base">
                 See how it works
@@ -47,61 +43,57 @@ export default function LandingPage() {
             </div>
             <p className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs text-faint">
               <span className="inline-flex items-center gap-1">
-                <Lock className="h-3.5 w-3.5" /> Isolated micro-VM
+                <Lock className="h-3.5 w-3.5" /> Private to you
               </span>
               <span className="inline-flex items-center gap-1">
-                <Gauge className="h-3.5 w-3.5" /> Hard spend cap
+                <Wallet className="h-3.5 w-3.5" /> You set the budget
               </span>
               <span className="inline-flex items-center gap-1">
-                <Check className="h-3.5 w-3.5" /> Live in ~2 minutes
+                <Check className="h-3.5 w-3.5" /> Ready in minutes
               </span>
             </p>
           </div>
 
-          {/* Tangible visual: the agent's own dashboard at its own URL */}
-          <BrowserMock />
+          <ChatMock />
         </div>
       </section>
 
-      {/* ── Problem / agitate ────────────────────────────────────────────── */}
+      {/* ── Problem ──────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 py-20">
         <div className="max-w-3xl">
-          <Eyebrow>The gap</Eyebrow>
+          <Eyebrow>The problem</Eyebrow>
           <h2 className="mt-3 text-3xl sm:text-4xl">
-            Everyone has a chatbot. Almost no one has an agent.
+            Today&apos;s AI forgets you the moment you close the tab.
           </h2>
           <p className="mt-6 text-lg text-muted">
-            Chatbots forget you the moment you close the tab. They can&apos;t run a task, keep a
-            memory, or get better. A real autonomous agent can — but standing one up means a server,
-            Docker, model APIs, secret management, and the constant fear of a runaway bill.
-          </p>
-          <p className="mt-4 text-lg text-muted">
-            So you settle for a goldfish, or sink weekends into DevOps instead of getting work done.
+            You explain the same context over and over. It can hold a conversation, but it
+            can&apos;t remember your preferences, follow through on a task, or get better at your
+            work. So it stays a clever novelty instead of a real help.
           </p>
           <p className="mt-6 border-l-4 border-coral pl-4 text-xl font-semibold text-ink">
-            AgntOS is the third option: a real agent, fully hosted, in one click.
+            AgntOS gives you an assistant that remembers, learns your routines, and actually does the
+            work — with no setup.
           </p>
         </div>
       </section>
 
       {/* ── How it works ─────────────────────────────────────────────────── */}
-      <section id="how" className="border-y-2 border-line bg-cloud scroll-mt-20">
+      <section id="how" className="scroll-mt-20 border-y-2 border-line bg-cloud">
         <div className="mx-auto max-w-6xl px-5 py-20">
           <Eyebrow>How it works</Eyebrow>
-          <h2 className="mt-3 text-3xl sm:text-4xl">Three steps to a live agent</h2>
+          <h2 className="mt-3 text-3xl sm:text-4xl">Up and running in three steps</h2>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
-            <Step n="01" icon={<Bot />} title="Name & shape it">
-              Give your agent a name — that becomes its address,{" "}
-              <span className="font-mono text-ink">name.agntos.net</span>. Add a personality. That&apos;s
-              the only setup there is.
+            <Step n="01" icon={<Sparkles />} title="Name it & shape it">
+              Give your assistant a name and tell it how you&apos;d like it to work. That&apos;s the
+              whole setup — no apps, no settings.
             </Step>
-            <Step n="02" icon={<Rocket />} title="One click to launch">
-              We spin up an isolated micro-VM, boot Hermes, provision a TLS cert, and mint a
-              spend-capped key. No infra, no config files.
+            <Step n="02" icon={<Rocket />} title="It goes live">
+              In a couple of minutes it&apos;s ready and private to you. It even sends you the first
+              message.
             </Step>
-            <Step n="03" icon={<Globe />} title="Reach it anywhere">
-              Open its private web dashboard at your URL, or message it on Telegram. It&apos;s already
-              working — and it messages you first.
+            <Step n="03" icon={<MessageSquare />} title="Put it to work">
+              Chat with it on the web, or message it on Telegram like a colleague. It remembers
+              everything from then on.
             </Step>
           </div>
         </div>
@@ -109,75 +101,73 @@ export default function LandingPage() {
 
       {/* ── What you get ─────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 py-20">
-        <Eyebrow>What you get</Eyebrow>
-        <h2 className="mt-3 text-3xl sm:text-4xl">An agent that&apos;s actually yours</h2>
+        <Eyebrow>Why people love it</Eyebrow>
+        <h2 className="mt-3 text-3xl sm:text-4xl">An assistant that&apos;s actually yours</h2>
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <Feature icon={<Globe />} title="Its own URL + dashboard">
-            Every agent gets a private Hermes web dashboard at{" "}
-            <span className="font-mono text-ink">name.agntos.net</span> — chat, live terminal,
-            sessions, skills and memory, behind your password.
+          <Feature icon={<Brain />} title="Remembers everything">
+            It keeps the context of every conversation and your preferences, so you never repeat
+            yourself — and it gets more useful the more you use it.
           </Feature>
-          <Feature icon={<Brain />} title="Memory that sticks">
-            It accumulates memory and writes reusable skills to a persistent volume. It gets more
-            useful every day — and survives every restart.
+          <Feature icon={<ListChecks />} title="Handles the busywork">
+            Summarize your inbox, draft replies, chase follow-ups, do research. It takes care of
+            repetitive tasks and learns your routines so it gets faster over time.
           </Feature>
-          <Feature icon={<Wallet />} title="Dollars, not tokens">
-            See balance and burn rate in plain dollars. Top up in one click. A hard spend cap means
-            your agent can never run up a surprise bill.
+          <Feature icon={<Wallet />} title="You control the cost">
+            See exactly what it costs in plain dollars and set your own limit. It can never run up a
+            surprise bill — and you only top up when you want.
           </Feature>
-          <Feature icon={<Lock />} title="Isolated by design">
-            Every agent runs in its own Firecracker micro-VM. Hermes writes and runs its own code,
-            so true isolation isn&apos;t optional — it&apos;s the default.
+          <Feature icon={<Lock />} title="Private to you">
+            Your assistant and everything it knows is yours alone — never shared, never pooled with
+            anyone else. Remove it and it&apos;s all gone.
           </Feature>
-          <Feature icon={<Sparkles />} title="No model homework">
-            The auto-router picks a strong model for each request, tuned for cost. No API keys to
-            juggle, no model decisions to second-guess.
+          <Feature icon={<Zap />} title="No tech required">
+            Nothing to install, no settings to wrangle, no AI know-how. If you can send a message,
+            you can use it.
           </Feature>
-          <Feature icon={<MessageSquare />} title="Lives where you do">
-            Talk to it on its web dashboard or on Telegram — connect and disconnect channels in a
-            click. WhatsApp and Slack next.
+          <Feature icon={<MessageSquare />} title="Reach it anywhere">
+            Use it on the web or message it on Telegram — connect it in a click. WhatsApp and Slack
+            are coming next.
           </Feature>
         </div>
       </section>
 
-      {/* ── Dashboard showcase ───────────────────────────────────────────── */}
+      {/* ── Showcase ─────────────────────────────────────────────────────── */}
       <section className="border-y-2 border-line bg-ink text-paper">
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-20 lg:grid-cols-2">
           <div>
-            <p className="font-mono text-xs uppercase tracking-widest text-lime">
-              name.agntos.net
-            </p>
-            <h2 className="mt-3 text-3xl text-paper sm:text-4xl">
-              A real dashboard, not a chat box
-            </h2>
+            <p className="font-mono text-xs uppercase tracking-widest text-lime">Your private space</p>
+            <h2 className="mt-3 text-3xl text-paper sm:text-4xl">Simple to use. Always yours.</h2>
             <p className="mt-5 text-lg text-paper/70">
-              Your agent ships with the full Hermes control panel — a live terminal, session
-              history, the skills it&apos;s written, its memory, model usage in dollars, and channel
-              settings. All at your own address, gated by your password.
+              A clean, private space to chat with your assistant, hand it tasks, see what it&apos;s
+              done, and keep it on budget. No clutter, no jargon — just an assistant that gets things
+              done.
             </p>
-            <ul className="mt-6 space-y-2 font-mono text-sm text-paper/80">
-              {["Live PTY terminal + chat", "Sessions, logs & skills", "Model usage in $", "Channels: connect / disconnect"].map(
-                (f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-lime" /> {f}
-                  </li>
-                ),
-              )}
+            <ul className="mt-6 space-y-2 text-sm text-paper/80">
+              {[
+                "Chat and hand off tasks",
+                "See everything it's done for you",
+                "Track what it costs, in dollars",
+                "Connect Telegram in a click",
+              ].map((f) => (
+                <li key={f} className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-lime" /> {f}
+                </li>
+              ))}
             </ul>
           </div>
-          <div className="rounded-none border-2 border-paper/20 bg-paper/5 p-2">
-            <DashboardMock />
+          <div className="border-2 border-paper/20 bg-paper/5 p-2">
+            <AssistantMock />
           </div>
         </div>
       </section>
 
-      {/* ── Pricing teaser ───────────────────────────────────────────────── */}
+      {/* ── Pricing ──────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 py-20">
         <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
           <div>
             <Eyebrow>Simple pricing</Eyebrow>
-            <h2 className="mt-3 text-3xl sm:text-4xl">Two plans. Credits on top.</h2>
-            <p className="mt-3 text-muted">Pause to storage-only billing anytime. No lock-in.</p>
+            <h2 className="mt-3 text-3xl sm:text-4xl">Pick a plan, then pay as you go.</h2>
+            <p className="mt-3 text-muted">Pause anytime. No contracts, no lock-in.</p>
           </div>
           <Link href="/pricing" className="font-mono text-sm font-semibold text-ink hover:underline">
             Full pricing →
@@ -209,39 +199,35 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FAQ (objection handling) ─────────────────────────────────────── */}
+      {/* ── FAQ ──────────────────────────────────────────────────────────── */}
       <section className="border-t-2 border-line bg-cloud">
         <div className="mx-auto max-w-3xl px-5 py-20">
-          <Eyebrow>Before you ask</Eyebrow>
+          <Eyebrow>Common questions</Eyebrow>
           <h2 className="mt-3 text-3xl sm:text-4xl">The honest answers</h2>
           <div className="mt-8 divide-y-2 divide-hair border-y-2 border-line">
-            <Faq q="Will it run up a huge bill?">
-              No. Each agent gets a spend-capped key and a dollar wallet — when the balance is gone,
-              it stops. You see burn rate in plain dollars and top up only when you choose.
+            <Faq q="Will it cost a fortune?">
+              No. You see the cost in plain dollars and set your own limit, so it can never run up a
+              surprise bill. Top up only when you want, and pause anytime.
             </Faq>
-            <Faq q="Is my data private?">
-              Every agent runs alone in its own Firecracker micro-VM. Its memory and the skills it
-              writes live on a private volume that only it can reach. Delete the agent and it&apos;s
-              all wiped.
+            <Faq q="Is my information private?">
+              Yes. Your assistant is yours alone, and everything it remembers stays private to you —
+              never shared with other customers. Remove it and it&apos;s all permanently gone.
             </Faq>
-            <Faq q="What exactly is a Hermes agent?">
-              Hermes is Nous Research&apos;s open autonomous agent — persistent memory, a real
-              terminal, browser control, and the ability to write and run its own skills. AgntOS
-              hosts one for you, configured and isolated, with nothing to install.
+            <Faq q="Do I need to be technical?">
+              Not at all. There&apos;s nothing to install and nothing to configure. If you can send a
+              message, you&apos;re ready to go.
+            </Faq>
+            <Faq q="What can it actually do for me?">
+              Remember your context, draft and summarize, do research, track tasks and follow-ups,
+              and take care of repetitive work — and it learns how you like things done over time.
             </Faq>
             <Faq q="How do I talk to it?">
-              Two ways, both included: a private web dashboard at{" "}
-              <span className="font-mono text-ink">name.agntos.net</span> (chat + live terminal), and
-              Telegram. Connect or disconnect channels with one click.
-            </Faq>
-            <Faq q="Which model does it use?">
-              By default the OpenRouter auto-router picks a strong model per request and keeps cost
-              in check. You never touch an API key — and you can pin a specific model in the
-              dashboard if you want.
+              Two easy ways, both included: a simple private space on the web, and Telegram — message
+              it just like you would a colleague.
             </Faq>
             <Faq q="Can I cancel?">
-              Anytime. Pause to drop to storage-only billing and keep its memory, or delete to wipe
-              everything. You&apos;re always in control.
+              Anytime. Pause to stop billing and keep its memory, or remove it to wipe everything.
+              You&apos;re always in control.
             </Faq>
           </div>
         </div>
@@ -250,14 +236,14 @@ export default function LandingPage() {
       {/* ── Final CTA ────────────────────────────────────────────────────── */}
       <section className="bg-lime">
         <div className="mx-auto max-w-4xl px-5 py-20 text-center">
-          <h2 className="text-4xl sm:text-5xl">Your agent is one click away.</h2>
+          <h2 className="text-4xl sm:text-5xl">Your assistant is one click away.</h2>
           <p className="mx-auto mt-5 max-w-xl text-lg text-ink/80">
-            Launch it, name it, and it&apos;ll message you first — live at your own URL in about two
-            minutes.
+            Set it up, give it a name, and it&apos;ll be ready — and message you first — in a couple
+            of minutes.
           </p>
           <div className="mt-8 flex justify-center">
             <ButtonLink href="/signup" variant="dark" className="text-base">
-              Launch your agent →
+              Get your assistant →
             </ButtonLink>
           </div>
         </div>
@@ -268,55 +254,48 @@ export default function LandingPage() {
 
 /* ── Visuals ─────────────────────────────────────────────────────────────── */
 
-function BrowserMock() {
+function ChatMock() {
   return (
     <div className="self-center border-2 border-ink bg-paper shadow-[8px_8px_0_0_var(--color-ink)]">
-      <div className="flex items-center gap-2 border-b-2 border-line bg-ink px-3 py-2">
-        <span className="h-2.5 w-2.5 rounded-full bg-coral" />
-        <span className="h-2.5 w-2.5 rounded-full bg-lime" />
-        <span className="h-2.5 w-2.5 rounded-full bg-paper/40" />
-        <span className="ml-2 flex-1 truncate border border-line bg-paper px-2 py-0.5 font-mono text-[11px] text-ink">
-          🔒 nova.agntos.net
-        </span>
+      <div className="flex items-center gap-2 border-b-2 border-line bg-ink px-4 py-2.5">
+        <span className="h-3 w-3 border border-lime bg-lime" />
+        <span className="font-mono text-xs font-semibold text-lime">Your assistant</span>
       </div>
-      <div className="grid grid-cols-[84px_1fr]">
-        <nav className="space-y-1 border-r-2 border-line bg-cloud p-2 font-mono text-[10px] text-muted">
-          {["Chat", "Sessions", "Models", "Skills", "Memory", "Channels"].map((i, idx) => (
-            <div
-              key={i}
-              className={idx === 0 ? "bg-lime px-1.5 py-1 text-ink" : "px-1.5 py-1"}
-            >
-              {i}
-            </div>
-          ))}
-        </nav>
-        <div className="space-y-2 p-3 text-sm">
-          <Bubble who="you">summarize my unread email and draft replies</Bubble>
-          <Bubble who="agent">
-            Done — 6 unread, 2 need you. Drafts ready in the thread. Saved a skill so I&apos;ll do
-            this each morning. ✅
-          </Bubble>
-        </div>
+      <div className="space-y-3 p-4 text-sm">
+        <Bubble who="you">summarize today&apos;s meetings and send me the action items</Bubble>
+        <Bubble who="agent">
+          Done — sent to your inbox. 4 action items, 2 are yours. Want me to do this automatically
+          every evening? ✅
+        </Bubble>
+        <Bubble who="you">yes please</Bubble>
+        <Bubble who="agent">
+          Set. I&apos;ll handle it at 5pm daily and remember how you like the summary. 👍
+        </Bubble>
       </div>
     </div>
   );
 }
 
-function DashboardMock() {
+function AssistantMock() {
   return (
     <div className="border-2 border-paper/20 bg-ink">
       <div className="flex items-center gap-1.5 border-b border-paper/15 px-3 py-2">
         <span className="h-2 w-2 rounded-full bg-coral" />
         <span className="h-2 w-2 rounded-full bg-lime" />
-        <span className="ml-2 font-mono text-[10px] text-paper/50">nova.agntos.net/chat</span>
+        <span className="ml-2 font-mono text-[10px] text-paper/50">your assistant</span>
       </div>
-      <div className="p-3 font-mono text-[11px] leading-relaxed text-lime">
-        <p className="text-paper/40"># live terminal</p>
-        <p>$ hermes recall &quot;supplier follow-ups&quot;</p>
-        <p className="text-paper/70">→ 3 open · drafting nudges…</p>
-        <p>$ skill.save morning_inbox_triage</p>
-        <p className="text-paper/70">→ saved · runs daily 09:00 ✓</p>
-        <p className="mt-1 inline-block bg-lime px-1 text-ink">▌</p>
+      <div className="space-y-2 p-3 text-sm">
+        <div className="flex justify-end">
+          <span className="max-w-[85%] border border-paper/20 bg-paper/10 px-2.5 py-1.5 text-paper">
+            draft a reply to the supplier and chase the overdue invoice
+          </span>
+        </div>
+        <div className="flex justify-start">
+          <span className="max-w-[88%] border-2 border-lime bg-lime px-2.5 py-1.5 text-ink">
+            Reply drafted in your inbox, and I&apos;ve flagged the invoice — I&apos;ll nudge them
+            again Friday if there&apos;s no answer. ✓
+          </span>
+        </div>
       </div>
     </div>
   );
