@@ -41,6 +41,13 @@ if [ -z "${OPENROUTER_API_KEY:-}" ]; then
   exit 1
 fi
 
+# ── Web access: enable Hermes' OpenAI-compatible API server so the AgntOS
+#    control plane can proxy browser chat to this agent. Bound to 0.0.0.0 so the
+#    exposed Fly service reaches it; API_SERVER_KEY arrives as a Fly secret. ─────
+export API_SERVER_ENABLED="${API_SERVER_ENABLED:-true}"
+export API_SERVER_HOST="${API_SERVER_HOST:-0.0.0.0}"
+export API_SERVER_PORT="${API_SERVER_PORT:-8642}"
+
 echo "[agntos] booting agent ${AGENT_ID:-?} (${AGENT_NAME:-Agent}) model=${HERMES_INFERENCE_MODEL} channel=${CHANNEL:-none}"
 
 # ── Personality / system prompt (best-effort; confirm the real config key) ─────

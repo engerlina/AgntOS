@@ -58,6 +58,11 @@ export const agent = pgTable(
     ramMb: integer("ram_mb").notNull().default(2048),
     // The per-user OpenRouter key hash (NOT the secret — secret lives in Fly).
     openrouterKeyHash: text("openrouter_key_hash"),
+    // Web access: the agent's handle (== subdomain), public URL, and the
+    // encrypted basic-auth password for its Hermes dashboard.
+    slug: text("slug").unique(),
+    publicUrl: text("public_url"),
+    webPasswordCipher: text("web_password_cipher"),
     // Free-form provider/status detail for the dashboard + debugging.
     statusDetail: text("status_detail"),
     createdAt: timestamp("created_at", { withTimezone: true })

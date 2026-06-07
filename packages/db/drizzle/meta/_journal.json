@@ -8,6 +8,13 @@
       "when": 1780819364417,
       "tag": "0000_silent_overlord",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780834377108,
+      "tag": "0001_nappy_supernaut",
+      "breakpoints": true
     }
   ]
 }
