@@ -22,7 +22,7 @@ export function SiteHeader() {
             Log in
           </Link>
           <ButtonLink href="/signup" variant="primary">
-            Get your agent
+            Get your assistant
           </ButtonLink>
         </nav>
       </div>
