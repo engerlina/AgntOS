@@ -85,12 +85,11 @@ if [ -n "${DASHBOARD_PASSWORD:-}" ] && command -v caddy >/dev/null 2>&1; then
       echo "  basic_auth {"
       echo "    ${DASHBOARD_USER:-agent} ${DASH_HASH}"
       echo "  }"
-      echo "  reverse_proxy 127.0.0.1:9119 {"
       # Forward the ORIGINAL Host (do NOT rewrite) so the dashboard scopes its
-      # session cookie to <slug>.agntos.net; tell it the edge is HTTPS so the
-      # cookie gets Secure. The host guard is handled by HERMES_DASHBOARD_PUBLIC_URL.
-      echo "    header_up X-Forwarded-Proto https"
-      echo "  }"
+      # session cookie to <slug>.agntos.net. Do NOT add X-Forwarded-Proto — it
+      # breaks uvicorn's WebSocket upgrade (the Chat tab's PTY → 502); the Secure
+      # cookie is already handled by HERMES_DASHBOARD_PUBLIC_URL=https://…
+      echo "  reverse_proxy 127.0.0.1:9119"
       echo "}"
     } > /tmp/Caddyfile
     echo "[agntos] starting Hermes dashboard (:9119) + Caddy auth proxy (:8088)"
