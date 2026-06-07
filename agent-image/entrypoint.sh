@@ -17,6 +17,14 @@ set -euo pipefail
 export HERMES_HOME
 mkdir -p "${HERMES_HOME}"
 
+# First boot: the Fly volume mounts EMPTY over ~/.hermes, hiding the baked Hermes
+# runtime. Seed it from the image so venv/node/code (+ initial config) are present.
+# Later boots already have everything (incl. accumulated memory + skills) → skip.
+if [ ! -e "${HERMES_HOME}/hermes-agent" ] && [ -d /opt/hermes-seed ]; then
+  echo "[agntos] seeding Hermes home from image (first boot)…"
+  cp -a /opt/hermes-seed/. "${HERMES_HOME}/"
+fi
+
 # ── Main model per tier (HERMES_INFERENCE_MODEL overrides config.yaml) ─────────
 # Swap these OpenRouter slugs for your curated Standard/Smart choices.
 if [ -z "${HERMES_INFERENCE_MODEL:-}" ]; then

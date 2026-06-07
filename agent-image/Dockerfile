@@ -42,22 +42,25 @@ RUN chmod +x /opt/agntos/entrypoint.sh
 
 # ── Non-root user ──────────────────────────────────────────────────────────────
 RUN useradd --create-home --shell /bin/bash --uid 10001 hermes \
-    && mkdir -p /home/hermes/.hermes \
-    && chown -R hermes:hermes /home/hermes /opt/agntos
+    && mkdir -p /home/hermes/.hermes /opt/hermes-seed \
+    && chown -R hermes:hermes /home/hermes /opt/agntos /opt/hermes-seed
 USER hermes
 WORKDIR /home/hermes
 # uv + Hermes install into ~/.local/bin; make sure it's on PATH for the entrypoint.
 ENV PATH="/home/hermes/.local/bin:${PATH}"
 
-# ── Install Hermes (installs uv + Python deps, clones the repo, adds `hermes`) ──
+# ── Install Hermes (installs uv + Python deps + Node, clones the repo) ──────────
+# The launcher lands at ~/.local/bin/hermes (on PATH); the runtime (venv + node +
+# code) lands under ~/.hermes/.
 RUN curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
 
-# Diagnostic: surface where the installer placed the `hermes` executable + bins,
-# so we can set PATH correctly and (next) seed the data volume. Never fails build.
-RUN echo "--- ~/.hermes/bin ---"; ls -la /home/hermes/.hermes/bin 2>/dev/null | head -40 || true; \
-    echo "--- ~/.local/bin ---"; ls -la /home/hermes/.local/bin 2>/dev/null | head -40 || true; \
-    echo "--- find hermes ---"; find /home/hermes -maxdepth 5 -name hermes 2>/dev/null | head || true; \
-    echo "--- shell rc PATH edits ---"; grep -hRE "PATH|hermes" /home/hermes/.bashrc /home/hermes/.profile 2>/dev/null | head || true
+# Bake the installed ~/.hermes as a SEED, then empty the mount point. At runtime
+# the Fly volume mounts over ~/.hermes (hiding any image content), so the
+# entrypoint seeds the volume from /opt/hermes-seed on first boot — persisting the
+# runtime + memory + skills together. Avoids carrying two copies in the image.
+RUN cp -a /home/hermes/.hermes/. /opt/hermes-seed/ \
+    && rm -rf /home/hermes/.hermes \
+    && mkdir -p /home/hermes/.hermes
 
 # Persistent memory + self-written skills (Fly volume mounts over this path).
 VOLUME ["/home/hermes/.hermes"]
