@@ -6,8 +6,7 @@ import { decryptSecret } from "@agntos/core/crypto";
 import { getAgentForUser } from "@/lib/agents";
 import { getSession } from "@/lib/session";
 
-// Agent responses can take a while; allow up to 60s (Vercel Pro). On Hobby this
-// is capped at ~10s — switch to streaming if you hit that.
+// Streaming responses; allow up to 60s for the model to finish.
 export const maxDuration = 60;
 
 const Schema = z.object({
@@ -17,9 +16,10 @@ const Schema = z.object({
 });
 
 /**
- * Proxy a chat turn to the agent's Hermes API server. The per-agent key is
- * decrypted server-side and never reaches the browser; the user is authorized by
- * their AgntOS session owning the agent.
+ * Proxy a chat turn to the agent's Hermes API server and STREAM the reply back
+ * (OpenAI-style SSE) so the browser can render tokens as they arrive. The
+ * per-agent key is decrypted server-side and never reaches the browser; the user
+ * is authorized by their AgntOS session owning the agent.
  */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -40,30 +40,35 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const apiKey = await decryptSecret(agent.webPasswordCipher);
 
-  let res: Response;
+  let upstream: Response;
   try {
-    res = await fetch(`${agent.publicUrl}/v1/chat/completions`, {
+    upstream = await fetch(`${agent.publicUrl}/v1/chat/completions`, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "hermes-agent",
         messages: parsed.data.messages,
-        stream: false,
+        stream: true,
       }),
-      signal: AbortSignal.timeout(55_000),
     });
   } catch (e) {
-    return NextResponse.json({ error: "Couldn't reach the agent.", detail: String(e) }, { status: 504 });
+    return NextResponse.json(
+      { error: "Couldn't reach the agent.", detail: String(e) },
+      { status: 504 },
+    );
   }
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
+  if (!upstream.ok || !upstream.body) {
+    const detail = await upstream.text().catch(() => "");
     return NextResponse.json({ error: "Agent returned an error.", detail }, { status: 502 });
   }
 
-  const data = (await res.json().catch(() => ({}))) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  const reply = data.choices?.[0]?.message?.content ?? "";
-  return NextResponse.json({ reply });
+  // Pipe the upstream SSE straight through to the browser.
+  return new Response(upstream.body, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
 }
