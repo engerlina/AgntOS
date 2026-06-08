@@ -22,6 +22,13 @@
       "when": 1780863797007,
       "tag": "0002_useful_greymalkin",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780909822248,
+      "tag": "0003_overrated_wolfpack",
+      "breakpoints": true
     }
   ]
 }

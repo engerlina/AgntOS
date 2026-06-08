@@ -190,6 +190,31 @@ export const auditLog = pgTable(
   (t) => [index("audit_log_user_id_idx").on(t.userId)],
 );
 
+/**
+ * Saved conversations for the in-AgntOS web chat. One row per thread; the whole
+ * message list lives in `messages` (jsonb). Image data is stripped before saving
+ * (kept lightweight); content is `string | OpenAI-style content parts`.
+ */
+export const chatThread = pgTable(
+  "chat_thread",
+  {
+    id: text("id").primaryKey(), // client-generated id (uuid)
+    agentId: uuid("agent_id")
+      .notNull()
+      .references(() => agent.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default("New chat"),
+    messages: jsonb("messages")
+      .$type<{ role: "user" | "assistant"; content: unknown }[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("chat_thread_agent_id_idx").on(t.agentId)],
+);
+
+export type ChatThread = typeof chatThread.$inferSelect;
+
 // ── relations (used by the relational query API) ───────────────────────────
 export const userRelations = relations(user, ({ one, many }) => ({
   agents: many(agent),

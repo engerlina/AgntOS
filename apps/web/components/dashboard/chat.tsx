@@ -42,7 +42,6 @@ const EXAMPLES = [
 const TEXT_RE = /\.(md|markdown|csv|tsv|json|ya?ml|txt|log|xml|html?|css|js|ts|tsx|jsx|py|rb|go|rs|java|c|cpp|sh|sql)$/i;
 const MAX_FILE = 8 * 1024 * 1024;
 
-const lsKey = (agentId: string) => `agntos.chat.${agentId}`;
 const uid = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
@@ -97,41 +96,48 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
   const ordered = [...threads].sort((a, b) => b.updatedAt - a.updatedAt);
 
   useEffect(() => {
-    let saved: { threads: Thread[]; activeId: string } | null = null;
-    try {
-      const raw = localStorage.getItem(lsKey(agentId));
-      if (raw) saved = JSON.parse(raw) as { threads: Thread[]; activeId: string };
-    } catch {
-      /* corrupt / disabled */
-    }
-    if (saved?.threads?.length) {
-      const list = saved.threads;
-      const wantId = saved.activeId;
-      setThreads(list);
-      setActiveId(list.find((t) => t.id === wantId)?.id ?? list[0]?.id ?? "");
-    } else {
-      const fresh: Thread = { id: uid(), title: "New chat", messages: [], updatedAt: Date.now() };
-      setThreads([fresh]);
-      setActiveId(fresh.id);
-    }
-    setLoaded(true);
+    let cancelled = false;
+    (async () => {
+      let list: Thread[] = [];
+      try {
+        const res = await fetch(`/api/agents/${agentId}/threads`, { cache: "no-store" });
+        if (res.ok) list = ((await res.json()) as { threads?: Thread[] }).threads ?? [];
+      } catch {
+        /* offline — start fresh */
+      }
+      if (cancelled) return;
+      const first = list[0];
+      if (first) {
+        setThreads(list);
+        setActiveId(first.id);
+      } else {
+        const fresh: Thread = { id: uid(), title: "New chat", messages: [], updatedAt: Date.now() };
+        setThreads([fresh]);
+        setActiveId(fresh.id);
+      }
+      setLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [agentId]);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || !active || active.messages.length === 0) return;
+    const body = JSON.stringify({
+      id: active.id,
+      title: active.title,
+      messages: active.messages.map((m) => ({ ...m, content: stripImages(m.content) })),
+    });
     const t = setTimeout(() => {
-      try {
-        const slim = threads.map((th) => ({
-          ...th,
-          messages: th.messages.map((m) => ({ ...m, content: stripImages(m.content) })),
-        }));
-        localStorage.setItem(lsKey(agentId), JSON.stringify({ threads: slim, activeId }));
-      } catch {
-        /* quota */
-      }
-    }, 300);
+      void fetch(`/api/agents/${agentId}/threads`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body,
+      }).catch(() => {});
+    }, 600);
     return () => clearTimeout(t);
-  }, [threads, activeId, loaded, agentId]);
+  }, [active, loaded, agentId]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -312,6 +318,9 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
   }
 
   function deleteThread(id: string) {
+    void fetch(`/api/agents/${agentId}/threads?threadId=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).catch(() => {});
     setThreads((prev) => {
       const next = prev.filter((t) => t.id !== id);
       if (next.length === 0) {
