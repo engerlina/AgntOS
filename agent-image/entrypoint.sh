@@ -133,8 +133,19 @@ if [ -n "${DASHBOARD_PASSWORD:-}" ] && command -v caddy >/dev/null 2>&1; then
     # basic-auth is the real gate and :9119 is NOT exposed by Fly (only :8088→443).
     # HERMES_DASHBOARD_PUBLIC_URL (set by the worker) satisfies the Host guard and
     # scopes cookies to the public domain.
-    hermes dashboard --host 0.0.0.0 --port 9119 --no-open --insecure >/tmp/dashboard.log 2>&1 &
-    caddy run --config /tmp/Caddyfile --adapter caddyfile >/tmp/caddy.log 2>&1 &
+    # Supervise both: a dead dashboard (it can exit while rebuilding its UI) means
+    # Caddy 502s and the user "can't connect", so respawn it instead of leaving it
+    # dead. The gateway stays foreground (its exit restarts the whole machine).
+    ( while true; do
+        hermes dashboard --host 0.0.0.0 --port 9119 --no-open --insecure >>/tmp/dashboard.log 2>&1
+        echo "[agntos] dashboard exited ($?) — respawning in 3s" >>/tmp/dashboard.log
+        sleep 3
+      done ) &
+    ( while true; do
+        caddy run --config /tmp/Caddyfile --adapter caddyfile >>/tmp/caddy.log 2>&1
+        echo "[agntos] caddy exited ($?) — respawning in 3s" >>/tmp/caddy.log
+        sleep 3
+      done ) &
   fi
 fi
 
