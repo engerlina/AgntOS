@@ -257,16 +257,39 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
     for (const file of Array.from(files)) {
       const isImage = file.type.startsWith("image/");
       const isText = file.type.startsWith("text/") || file.type === "application/json" || TEXT_RE.test(file.name);
-      if (!isImage && !isText) {
-        setError(`${file.name}: PDFs & Word are coming next — for now attach images or text/CSV/code files.`);
+      const isDoc =
+        file.type === "application/pdf" ||
+        /\.(pdf|docx)$/i.test(file.name) ||
+        file.type.includes("wordprocessingml");
+      if (!isImage && !isText && !isDoc) {
+        setError(`${file.name}: unsupported. Attach images, PDFs, Word docs, or text/CSV/code files.`);
         continue;
       }
-      if (file.size > MAX_FILE) {
-        setError(`${file.name} is too large (max 8 MB).`);
+      if (file.size > (isDoc ? 12 * 1024 * 1024 : MAX_FILE)) {
+        setError(`${file.name} is too large.`);
         continue;
       }
       const id = uid();
       setAttaches((a) => [...a, { id, name: file.name, kind: isImage ? "image" : "text", status: "loading" }]);
+
+      // PDF / Word → server-side text extraction; others read in the browser.
+      if (isDoc) {
+        const form = new FormData();
+        form.append("file", file);
+        fetch("/api/extract", { method: "POST", body: form })
+          .then(async (r) => {
+            const d = (await r.json().catch(() => ({}))) as { text?: string; error?: string };
+            if (r.ok && d.text) {
+              setAttaches((a) => a.map((x) => (x.id === id ? { ...x, status: "ready", text: d.text } : x)));
+            } else {
+              setAttaches((a) => a.map((x) => (x.id === id ? { ...x, status: "error" } : x)));
+              if (d.error) setError(`${file.name}: ${d.error}`);
+            }
+          })
+          .catch(() => setAttaches((a) => a.map((x) => (x.id === id ? { ...x, status: "error" } : x))));
+        continue;
+      }
+
       const reader = new FileReader();
       reader.onload = () => {
         const result = String(reader.result ?? "");
@@ -629,7 +652,7 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
             ref={fileRef}
             type="file"
             multiple
-            accept="image/*,text/*,.md,.csv,.tsv,.json,.yaml,.yml,.log,.xml,.html,.css,.js,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.c,.cpp,.sh,.sql"
+            accept="image/*,text/*,.pdf,.docx,application/pdf,.md,.csv,.tsv,.json,.yaml,.yml,.log,.xml,.html,.css,.js,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.c,.cpp,.sh,.sql"
             className="hidden"
             onChange={(e) => {
               addFiles(e.target.files);
