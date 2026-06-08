@@ -9,9 +9,19 @@ import { getSession } from "@/lib/session";
 // Streaming responses; allow up to 60s for the model to finish.
 export const maxDuration = 60;
 
+const ContentPart = z.union([
+  z.object({ type: z.literal("text"), text: z.string() }),
+  z.object({ type: z.literal("image_url"), image_url: z.object({ url: z.string() }) }),
+]);
+
 const Schema = z.object({
   messages: z
-    .array(z.object({ role: z.enum(["user", "assistant", "system"]), content: z.string() }))
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant", "system"]),
+        content: z.union([z.string(), z.array(ContentPart)]),
+      }),
+    )
     .min(1),
 });
 

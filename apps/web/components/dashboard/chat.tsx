@@ -3,13 +3,16 @@
 import {
   Check,
   Copy,
+  FileText,
   Menu,
+  Paperclip,
   Pencil,
   Plus,
   RefreshCw,
   Send,
   Square,
   Trash2,
+  X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
@@ -18,14 +21,26 @@ import remarkGfm from "remark-gfm";
 import { AgntosMark } from "@/components/brand";
 import { cn } from "@/lib/utils";
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Part = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+type Content = string | Part[];
+type Msg = { role: "user" | "assistant"; content: Content };
 type Thread = { id: string; title: string; messages: Msg[]; updatedAt: number };
+type Attach = {
+  id: string;
+  name: string;
+  kind: "image" | "text";
+  status: "loading" | "ready" | "error";
+  dataUrl?: string;
+  text?: string;
+};
 
 const EXAMPLES = [
   "What can you help me with?",
   "Draft a quick email for me",
   "Summarize some text for me",
 ];
+const TEXT_RE = /\.(md|markdown|csv|tsv|json|ya?ml|txt|log|xml|html?|css|js|ts|tsx|jsx|py|rb|go|rs|java|c|cpp|sh|sql)$/i;
+const MAX_FILE = 8 * 1024 * 1024;
 
 const lsKey = (agentId: string) => `agntos.chat.${agentId}`;
 const uid = () =>
@@ -33,13 +48,30 @@ const uid = () =>
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 
+function asText(c: Content): string {
+  if (typeof c === "string") return c;
+  return c
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("\n");
+}
+function asImages(c: Content): string[] {
+  if (typeof c === "string") return [];
+  return c
+    .filter((p): p is { type: "image_url"; image_url: { url: string } } => p.type === "image_url")
+    .map((p) => p.image_url.url);
+}
 function titleFrom(messages: Msg[]): string {
-  const first = messages
-    .find((m) => m.role === "user")
-    ?.content.trim()
-    .replace(/\s+/g, " ");
+  const first = messages.find((m) => m.role === "user");
   if (!first) return "New chat";
-  return first.length > 38 ? `${first.slice(0, 38)}…` : first;
+  const t = asText(first.content).trim().replace(/\s+/g, " ");
+  if (!t) return "Attachment";
+  return t.length > 38 ? `${t.slice(0, 38)}…` : t;
+}
+// Drop heavy image data before writing to localStorage (quota), keep a marker.
+function stripImages(content: Content): Content {
+  if (typeof content === "string") return content;
+  return content.map((p) => (p.type === "image_url" ? { type: "image_url", image_url: { url: "" } } : p));
 }
 
 export function Chat({ agentId, agentName }: { agentId: string; agentName: string }) {
@@ -47,6 +79,7 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
   const [activeId, setActiveId] = useState<string>("");
   const [loaded, setLoaded] = useState(false);
   const [input, setInput] = useState("");
+  const [attaches, setAttaches] = useState<Attach[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
@@ -56,13 +89,13 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const active = threads.find((t) => t.id === activeId);
   const messages = active?.messages ?? [];
   const ordered = [...threads].sort((a, b) => b.updatedAt - a.updatedAt);
 
-  // Load saved threads on mount.
   useEffect(() => {
     let saved: { threads: Thread[]; activeId: string } | null = null;
     try {
@@ -84,12 +117,15 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
     setLoaded(true);
   }, [agentId]);
 
-  // Persist (debounced so streaming doesn't thrash localStorage).
   useEffect(() => {
     if (!loaded) return;
     const t = setTimeout(() => {
       try {
-        localStorage.setItem(lsKey(agentId), JSON.stringify({ threads, activeId }));
+        const slim = threads.map((th) => ({
+          ...th,
+          messages: th.messages.map((m) => ({ ...m, content: stripImages(m.content) })),
+        }));
+        localStorage.setItem(lsKey(agentId), JSON.stringify({ threads: slim, activeId }));
       } catch {
         /* quota */
       }
@@ -97,7 +133,6 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
     return () => clearTimeout(t);
   }, [threads, activeId, loaded, agentId]);
 
-  // Keep the latest content in view as it streams.
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
@@ -121,7 +156,6 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
     );
   }
 
-  // base must end with a user message; streams an assistant reply into `threadId`.
   async function runTurn(threadId: string, base: Msg[]) {
     setError(null);
     updateThread(threadId, () => [...base, { role: "assistant", content: "" }]);
@@ -179,7 +213,9 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
       }
     } catch (err) {
       const aborted = err instanceof DOMException && err.name === "AbortError";
-      updateThread(threadId, (msgs) => (msgs[msgs.length - 1]?.content ? msgs : msgs.slice(0, -1)));
+      updateThread(threadId, (msgs) =>
+        asText(msgs[msgs.length - 1]?.content ?? "") ? msgs : msgs.slice(0, -1),
+      );
       if (!aborted) setError(err instanceof Error ? err.message : "Chat failed");
     } finally {
       setBusy(false);
@@ -187,12 +223,59 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
     }
   }
 
-  function sendText(raw: string) {
-    const text = raw.trim();
-    if (!text || busy || !active) return;
+  function buildContent(text: string, atts: Attach[]): Content {
+    const docs = atts.filter((a) => a.kind === "text" && a.text);
+    const imgs = atts.filter((a) => a.kind === "image" && a.dataUrl);
+    let full = text;
+    for (const d of docs) full += `${full ? "\n\n" : ""}--- ${d.name} ---\n${d.text}`;
+    if (imgs.length === 0) return full;
+    const parts: Part[] = [{ type: "text", text: full || "(see attached image)" }];
+    for (const img of imgs) parts.push({ type: "image_url", image_url: { url: img.dataUrl! } });
+    return parts;
+  }
+
+  function send() {
+    const text = input.trim();
+    const ready = attaches.filter((a) => a.status === "ready");
+    if ((!text && ready.length === 0) || busy || !active) return;
+    const content = buildContent(text, ready);
     setInput("");
+    setAttaches([]);
     requestAnimationFrame(autoGrow);
-    void runTurn(active.id, [...messages, { role: "user", content: text }]);
+    void runTurn(active.id, [...messages, { role: "user", content }]);
+  }
+
+  function addFiles(files: FileList | null) {
+    if (!files) return;
+    setError(null);
+    for (const file of Array.from(files)) {
+      const isImage = file.type.startsWith("image/");
+      const isText = file.type.startsWith("text/") || file.type === "application/json" || TEXT_RE.test(file.name);
+      if (!isImage && !isText) {
+        setError(`${file.name}: PDFs & Word are coming next — for now attach images or text/CSV/code files.`);
+        continue;
+      }
+      if (file.size > MAX_FILE) {
+        setError(`${file.name} is too large (max 8 MB).`);
+        continue;
+      }
+      const id = uid();
+      setAttaches((a) => [...a, { id, name: file.name, kind: isImage ? "image" : "text", status: "loading" }]);
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result ?? "");
+        setAttaches((a) =>
+          a.map((x) =>
+            x.id === id
+              ? { ...x, status: "ready", ...(isImage ? { dataUrl: result } : { text: result }) }
+              : x,
+          ),
+        );
+      };
+      reader.onerror = () => setAttaches((a) => a.map((x) => (x.id === id ? { ...x, status: "error" } : x)));
+      if (isImage) reader.readAsDataURL(file);
+      else reader.readAsText(file);
+    }
   }
 
   function regenerate() {
@@ -218,6 +301,7 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
     setSidebarOpen(false);
     setError(null);
     setEditIdx(null);
+    setAttaches([]);
   }
 
   function selectThread(id: string) {
@@ -256,7 +340,7 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
-      sendText(input);
+      send();
     }
   }
 
@@ -338,9 +422,9 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
               <div className="flex gap-3">
                 <AgntosMark className="mt-0.5 h-7 w-7 shrink-0" />
                 <div className="max-w-[88%] border-2 border-line bg-cloud px-3.5 py-2.5 text-sm text-ink">
-                  Hi! I&apos;m {agentName} 👋 — your AI assistant. I remember our conversations and
-                  can help with everyday work: drafting messages, summarizing, research, and keeping
-                  track of tasks. What can I help you with?
+                  Hi! I&apos;m {agentName} 👋 — your AI assistant. I remember our conversations, can
+                  read images and files you attach, and help with everyday work: drafting,
+                  summarizing, research, and tracking tasks. What can I help you with?
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 pl-10">
@@ -348,7 +432,13 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
                   <button
                     key={ex}
                     type="button"
-                    onClick={() => sendText(ex)}
+                    onClick={() => {
+                      setInput(ex);
+                      requestAnimationFrame(() => {
+                        autoGrow();
+                        taRef.current?.focus();
+                      });
+                    }}
                     disabled={busy}
                     className="border-2 border-line bg-paper px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:bg-cloud disabled:opacity-50"
                   >
@@ -359,47 +449,52 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
             </div>
           )}
 
-          {messages.map((m, i) =>
-            m.role === "user" ? (
-              editIdx === i ? (
-                <div key={i} className="flex justify-end">
-                  <div className="w-full max-w-[88%]">
-                    <textarea
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      className="field min-h-[64px] w-full resize-y text-sm"
-                      autoFocus
-                    />
-                    <div className="mt-1.5 flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditIdx(null);
-                          setEditText("");
-                        }}
-                        className="border-2 border-line bg-paper px-3 py-1 text-xs font-semibold text-ink hover:bg-cloud"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={saveEdit}
-                        className="border-2 border-ink bg-lime px-3 py-1 text-xs font-semibold text-ink hover:bg-lime-deep"
-                      >
-                        Send
-                      </button>
+          {messages.map((m, i) => {
+            if (m.role === "user") {
+              const text = asText(m.content);
+              const imgs = asImages(m.content);
+              if (editIdx === i) {
+                return (
+                  <div key={i} className="flex justify-end">
+                    <div className="w-full max-w-[88%]">
+                      <textarea
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        className="field min-h-[64px] w-full resize-y text-sm"
+                        autoFocus
+                      />
+                      <div className="mt-1.5 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditIdx(null);
+                            setEditText("");
+                          }}
+                          className="border-2 border-line bg-paper px-3 py-1 text-xs font-semibold text-ink hover:bg-cloud"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={saveEdit}
+                          className="border-2 border-ink bg-lime px-3 py-1 text-xs font-semibold text-ink hover:bg-lime-deep"
+                        >
+                          Send
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : (
+                );
+              }
+              return (
                 <div key={i} className="group flex justify-end">
                   <div className="flex max-w-[88%] items-start gap-1.5">
-                    {!busy && (
+                    {!busy && typeof m.content === "string" && (
                       <button
                         type="button"
                         onClick={() => {
                           setEditIdx(i);
-                          setEditText(m.content);
+                          setEditText(text);
                         }}
                         className="mt-1.5 shrink-0 text-faint opacity-0 transition hover:text-ink group-hover:opacity-100"
                         title="Edit & resend"
@@ -407,30 +502,54 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
                     )}
-                    <div className="whitespace-pre-wrap border-2 border-ink bg-ink px-3.5 py-2.5 text-sm text-paper">
-                      {m.content}
+                    <div className="border-2 border-ink bg-ink px-3.5 py-2.5 text-sm text-paper">
+                      {imgs.length > 0 && (
+                        <div className="mb-2 flex flex-wrap gap-2">
+                          {imgs.map((src, k) =>
+                            src ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                key={k}
+                                src={src}
+                                alt="attachment"
+                                className="max-h-40 max-w-[12rem] border border-paper/30 object-cover"
+                              />
+                            ) : (
+                              <span
+                                key={k}
+                                className="inline-flex items-center gap-1 border border-paper/30 px-2 py-1 text-xs text-paper/70"
+                              >
+                                <FileText className="h-3 w-3" /> image
+                              </span>
+                            ),
+                          )}
+                        </div>
+                      )}
+                      {text && <div className="whitespace-pre-wrap">{text}</div>}
                     </div>
                   </div>
                 </div>
-              )
-            ) : (
+              );
+            }
+            const text = asText(m.content);
+            return (
               <div key={i} className="group flex gap-3">
                 <AgntosMark className="mt-0.5 h-7 w-7 shrink-0" />
                 <div className="min-w-0 max-w-[88%]">
                   <div className="border-2 border-line bg-paper px-3.5 py-2.5">
-                    {m.content ? (
+                    {text ? (
                       <div className="chat-md">
-                        <Markdown remarkPlugins={[remarkGfm]}>{m.content}</Markdown>
+                        <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
                       </div>
                     ) : (
                       <Dots />
                     )}
                   </div>
-                  {m.content && !(busy && i === messages.length - 1) && (
+                  {text && !(busy && i === messages.length - 1) && (
                     <div className="mt-1 flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => void copy(m.content, i)}
+                        onClick={() => void copy(text, i)}
                         className="inline-flex items-center gap-1 font-mono text-[11px] text-faint opacity-0 transition hover:text-ink group-hover:opacity-100"
                       >
                         {copied === i ? (
@@ -456,8 +575,8 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
                   )}
                 </div>
               </div>
-            ),
-          )}
+            );
+          })}
         </div>
 
         {error && (
@@ -466,7 +585,57 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
           </p>
         )}
 
+        {/* attachment tray */}
+        {attaches.length > 0 && (
+          <div className="flex flex-wrap gap-2 border-t-2 border-hair px-3 pt-2.5">
+            {attaches.map((a) => (
+              <span
+                key={a.id}
+                className="inline-flex items-center gap-1.5 border-2 border-line bg-cloud py-1 pl-2 pr-1 text-xs text-ink"
+              >
+                {a.kind === "image" && a.dataUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={a.dataUrl} alt="" className="h-5 w-5 border border-line object-cover" />
+                ) : (
+                  <FileText className="h-3.5 w-3.5 text-faint" />
+                )}
+                <span className="max-w-[10rem] truncate">{a.name}</span>
+                {a.status === "loading" && <span className="text-faint">…</span>}
+                {a.status === "error" && <span className="text-coral">!</span>}
+                <button
+                  type="button"
+                  onClick={() => setAttaches((p) => p.filter((x) => x.id !== a.id))}
+                  className="text-faint hover:text-coral"
+                  title="Remove"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
         <form onSubmit={(e) => e.preventDefault()} className="flex items-end gap-2 border-t-2 border-line p-3">
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept="image/*,text/*,.md,.csv,.tsv,.json,.yaml,.yml,.log,.xml,.html,.css,.js,.ts,.tsx,.jsx,.py,.rb,.go,.rs,.java,.c,.cpp,.sh,.sql"
+            className="hidden"
+            onChange={(e) => {
+              addFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={busy}
+            title="Attach images or files"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center border-2 border-line bg-paper text-ink transition-colors hover:bg-cloud disabled:opacity-40"
+          >
+            <Paperclip className="h-4 w-4" />
+          </button>
           <textarea
             ref={taRef}
             rows={1}
@@ -490,8 +659,8 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
           ) : (
             <button
               type="button"
-              onClick={() => sendText(input)}
-              disabled={!input.trim()}
+              onClick={send}
+              disabled={!input.trim() && attaches.filter((a) => a.status === "ready").length === 0}
               className="inline-flex h-11 shrink-0 items-center gap-1.5 border-2 border-ink bg-lime px-4 text-sm font-semibold text-ink hover:bg-lime-deep disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Send className="h-3.5 w-3.5" /> Send
