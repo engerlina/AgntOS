@@ -13,9 +13,8 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function send(e: React.FormEvent) {
-    e.preventDefault();
-    const text = input.trim();
+  async function sendText(raw: string) {
+    const text = raw.trim();
     if (!text || pending) return;
     setError(null);
     const next: Msg[] = [...messages, { role: "user", content: text }];
@@ -38,6 +37,17 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
     }
   }
 
+  function send(e: React.FormEvent) {
+    e.preventDefault();
+    void sendText(input);
+  }
+
+  const examples = [
+    "What can you help me with?",
+    "Draft a quick email for me",
+    "Summarize some text for me",
+  ];
+
   return (
     <div className="flex h-[70vh] flex-col border-2 border-line bg-paper">
       <div className="flex items-center gap-2 border-b-2 border-line bg-ink px-4 py-2.5">
@@ -47,7 +57,28 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
 
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.length === 0 && (
-          <p className="pt-8 text-center text-sm text-faint">Say hi to {agentName} →</p>
+          <div className="space-y-4 pt-2">
+            <div className="flex justify-start">
+              <span className="max-w-[85%] whitespace-pre-wrap border-2 border-line bg-lime px-3 py-2 text-sm text-ink">
+                Hi! I&apos;m {agentName} 👋 — your AI assistant. I remember our conversations and can
+                help with everyday work: drafting messages, summarizing, research, and keeping track
+                of tasks. What can I help you with?
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {examples.map((ex) => (
+                <button
+                  key={ex}
+                  type="button"
+                  onClick={() => void sendText(ex)}
+                  disabled={pending}
+                  className="border-2 border-line bg-paper px-3 py-1.5 text-xs font-semibold text-ink transition-colors hover:bg-cloud disabled:opacity-50"
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
         {messages.map((m, i) => (
           <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
