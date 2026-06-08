@@ -12,12 +12,12 @@ export function DashboardLauncher({
   agentId,
   agentName,
   slug,
-  password,
+  cookieKey,
 }: {
   agentId: string;
   agentName: string;
   slug: string;
-  password: string;
+  cookieKey: string;
 }) {
   const [message, setMessage] = useState("Waking up your agent…");
   const [tooLong, setTooLong] = useState(false);
@@ -25,9 +25,10 @@ export function DashboardLauncher({
   useEffect(() => {
     let cancelled = false;
     let tries = 0;
-    // /__enter authenticates, sets a cookie, and 302s to the clean /chat URL —
-    // so there's no auth modal and no credentials left in window.location.
-    const directUrl = `https://agent:${encodeURIComponent(password)}@${slug}.agntos.net/__enter`;
+    // Token in the query string (NOT credentials in the URL — that breaks the
+    // dashboard's fetches). /__enter validates it, sets a cookie, and 302s to the
+    // clean /chat URL, so window.location ends up credential-free.
+    const directUrl = `https://${slug}.agntos.net/__enter?key=${encodeURIComponent(cookieKey)}`;
 
     async function poll() {
       tries += 1;
@@ -56,7 +57,7 @@ export function DashboardLauncher({
     return () => {
       cancelled = true;
     };
-  }, [agentId, slug, password]);
+  }, [agentId, slug, cookieKey]);
 
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 text-center">

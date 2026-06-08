@@ -102,6 +102,17 @@ if [ -n "${DASHBOARD_PASSWORD:-}" ] && command -v caddy >/dev/null 2>&1; then
       echo "  handle @authed {"
       echo "    reverse_proxy 127.0.0.1:9119"
       echo "  }"
+      # Token-in-query login: AgntOS opens /__enter?key=<token> (NO credentials in
+      # the URL — that's what breaks the dashboard's fetch() calls). Caddy validates
+      # the token, sets the cookie, and 302s to the clean URL.
+      echo "  @enterkey {"
+      echo "    path /__enter"
+      echo "    query key=${DASH_CV}"
+      echo "  }"
+      echo "  handle @enterkey {"
+      echo "    header +Set-Cookie \"dash_ok=${DASH_CV}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400\""
+      echo "    redir https://{host}/chat 302"
+      echo "  }"
       echo "  handle {"
       echo "    basic_auth {"
       echo "      ${DASHBOARD_USER:-agent} ${DASH_HASH}"
