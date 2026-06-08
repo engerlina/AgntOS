@@ -80,6 +80,7 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
   const [input, setInput] = useState("");
   const [attaches, setAttaches] = useState<Attach[]>([]);
   const [busy, setBusy] = useState(false);
+  const [turnStart, setTurnStart] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<number | null>(null);
   const [editIdx, setEditIdx] = useState<number | null>(null);
@@ -166,6 +167,7 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
     setError(null);
     updateThread(threadId, () => [...base, { role: "assistant", content: "" }]);
     setBusy(true);
+    setTurnStart(Date.now());
     const ac = new AbortController();
     abortRef.current = ac;
     try {
@@ -225,6 +227,7 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
       if (!aborted) setError(err instanceof Error ? err.message : "Chat failed");
     } finally {
       setBusy(false);
+      setTurnStart(null);
       abortRef.current = null;
     }
   }
@@ -574,7 +577,7 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
                         <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
                       </div>
                     ) : (
-                      <Dots />
+                      <Working since={turnStart} />
                     )}
                   </div>
                   {text && !(busy && i === messages.length - 1) && (
@@ -704,16 +707,27 @@ export function Chat({ agentId, agentName }: { agentId: string; agentName: strin
   );
 }
 
-function Dots() {
+function Working({ since }: { since: number | null }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const secs = since ? Math.max(0, Math.floor((Date.now() - since) / 1000)) : 0;
   return (
-    <span className="inline-flex items-center gap-1 py-1" aria-label="thinking">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="h-1.5 w-1.5 animate-bounce rounded-full bg-faint"
-          style={{ animationDelay: `${i * 150}ms` }}
-        />
-      ))}
+    <span className="inline-flex items-center gap-2 py-1" aria-label="working">
+      <span className="inline-flex items-center gap-1">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="h-1.5 w-1.5 animate-bounce rounded-full bg-faint"
+            style={{ animationDelay: `${i * 150}ms` }}
+          />
+        ))}
+      </span>
+      {secs >= 4 && (
+        <span className="font-mono text-xs text-faint">working… {secs}s</span>
+      )}
     </span>
   );
 }
