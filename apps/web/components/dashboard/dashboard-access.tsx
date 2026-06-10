@@ -8,20 +8,19 @@ import { useState } from "react";
  * Shows the AgntOS-set basic-auth credentials (reveal + copy) to the owner.
  */
 export function DashboardAccess({
+  agentId,
   slug,
   password,
   running,
 }: {
+  agentId: string;
   slug: string;
   password: string | null;
   running: boolean;
 }) {
-  const url = `https://${slug}.agntos.net/chat`;
-  // Deep-link with the credentials so clicking from AgntOS logs the owner straight
-  // in (no browser auth modal) and lands on the Chat tab.
-  const directUrl = password
-    ? `https://agent:${encodeURIComponent(password)}@${slug}.agntos.net/chat`
-    : url;
+  // Go through the AgntOS launch interstitial: it shows a loading screen, waits
+  // until the dashboard actually responds, then logs the owner straight into /chat.
+  const openUrl = `/dashboard/agents/${agentId}/open`;
   const [reveal, setReveal] = useState(false);
   const [copied, setCopied] = useState<"user" | "pass" | null>(null);
 
@@ -51,7 +50,7 @@ export function DashboardAccess({
           Hermes dashboard — <span className="font-mono text-ink">{slug}.agntos.net</span>
         </span>
         <a
-          href={directUrl}
+          href={openUrl}
           target="_blank"
           rel="noreferrer"
           className="btn btn-primary inline-flex items-center gap-1"

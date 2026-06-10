@@ -49,12 +49,14 @@ export const metadata: Metadata = {
     url: "https://www.agntos.net",
     siteName: "AgntOS",
     type: "website",
+    images: [{ url: "/og.jpg", width: 929, height: 985, alt: "AgntOS" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "AgntOS — A personal AI assistant that remembers you",
     description:
       "Your own AI assistant that remembers your work and handles the busywork — private to you, ready in minutes.",
+    images: ["/og.jpg"],
   },
 };
 

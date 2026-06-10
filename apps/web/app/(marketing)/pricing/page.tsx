@@ -63,8 +63,8 @@ export default function PricingPage() {
         <Eyebrow>Top-ups</Eyebrow>
         <h2 className="mt-3 text-2xl">Add credits any time</h2>
         <p className="mt-2 max-w-2xl text-sm">
-          Buy prepaid credits in one click from your dashboard. Set an auto-top-up so your agent
-          never goes quiet.
+          Buy prepaid credits in one click from your dashboard, any time your balance runs low. We
+          email you before you run out so your agent never goes quiet unexpectedly.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           {CREDIT_PACK_USD_OPTIONS.map((usd) => (
@@ -92,9 +92,9 @@ export default function PricingPage() {
           Never. Pick Standard or Smart and we handle the rest — including the eight background models
           Hermes uses for side tasks, tuned for cost.
         </Faq>
-        <Faq q="Can I bring my own API key?">
-          Yes. BYOK is supported — point your agent at your own provider key and you pay that bill
-          directly, with an optional spend cap.
+        <Faq q="Do I need my own API key?">
+          No — every plan includes managed models with a hard spend cap, so there&apos;s nothing to
+          configure. (Bring-your-own-key is on our roadmap.)
         </Faq>
       </div>
 

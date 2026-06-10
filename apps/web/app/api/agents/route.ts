@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { createAndProvisionAgent, getActiveTier, listAgents, slugAvailable } from "@/lib/agents";
+import {
+  createAndProvisionAgent,
+  getActiveTier,
+  listAgents,
+  slugAvailable,
+  toPublicAgent,
+} from "@/lib/agents";
 import { getSession } from "@/lib/session";
 import { slugError, slugify } from "@/lib/slug";
 
@@ -17,7 +23,7 @@ export async function GET() {
   const session = await getSession();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const agents = await listAgents(session.user.id);
-  return NextResponse.json({ agents });
+  return NextResponse.json({ agents: agents.map(toPublicAgent) });
 }
 
 export async function POST(req: Request) {
@@ -55,7 +61,7 @@ export async function POST(req: Request) {
         ? { botToken: parsed.data.telegramBotToken, ref: parsed.data.telegramRef }
         : undefined,
     });
-    return NextResponse.json({ agent }, { status: 201 });
+    return NextResponse.json({ agent: toPublicAgent(agent) }, { status: 201 });
   } catch (e) {
     // Unique-constraint backstop if two requests raced on the same slug.
     if (String(e).includes("slug")) {

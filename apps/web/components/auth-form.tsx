@@ -122,6 +122,20 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         {pending ? "…" : mode === "signup" ? "Create account" : "Log in"}
       </Button>
 
+      {mode === "signup" && (
+        <p className="text-center font-mono text-xs text-muted">
+          By creating an account you agree to our{" "}
+          <Link href="/terms" className="font-semibold text-ink hover:underline">
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="font-semibold text-ink hover:underline">
+            Privacy Policy
+          </Link>
+          .
+        </p>
+      )}
+
       <div className="flex items-center gap-3 py-1">
         <span className="h-px flex-1 bg-hair" />
         <span className="font-mono text-xs text-faint">or</span>

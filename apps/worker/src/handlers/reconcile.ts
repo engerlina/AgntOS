@@ -3,9 +3,12 @@ import { isCompEmail } from "@agntos/core/billing";
 import { getProvider, type AgentRef } from "@agntos/core/provisioning";
 import { agent, db, eq, inArray, subscription, user } from "@agntos/db";
 
-import { handlePause } from "./lifecycle";
+import { handleDestroy, handlePause } from "./lifecycle";
 
 type AgentRow = typeof agent.$inferSelect;
+
+/** Retention window for non-payment-paused agents (matches the cancellation email). */
+const RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
 
 function refOf(row: AgentRow): AgentRef | null {
   if (!row.flyAppId || !row.flyMachineId) return null;
@@ -43,11 +46,31 @@ export async function handleReconcile(): Promise<void> {
   }
 
   const provider = getProvider();
+  const retentionCutoff = new Date(Date.now() - RETENTION_MS);
   let drift = 0;
   let suspended = 0;
+  let destroyed = 0;
 
   for (const row of rows) {
     const ref = refOf(row);
+
+    // 0) Retention: destroy agents paused for non-payment past the 14-day window
+    //    (we promise deletion in the cancellation email; paused Fly volumes also
+    //    keep costing). Skip anyone who has since resubscribed. Direct call — a
+    //    failure just retries on the next hourly run since the row stays paused.
+    if (
+      isProd &&
+      row.status === "paused" &&
+      row.statusDetail === "non_payment" &&
+      row.updatedAt < retentionCutoff &&
+      !activeUsers.has(row.userId)
+    ) {
+      await handleDestroy({ agentId: row.id, reason: "subscription_ended" }).catch((e) =>
+        log.warn("reconcile: retention destroy failed", { agentId: row.id, error: String(e) }),
+      );
+      destroyed++;
+      continue;
+    }
 
     // 1) Status drift vs provider reality.
     if (ref && (row.status === "running" || row.status === "provisioning")) {
@@ -74,5 +97,5 @@ export async function handleReconcile(): Promise<void> {
     }
   }
 
-  log.info("reconcile complete", { agents: rows.length, drift, suspended });
+  log.info("reconcile complete", { agents: rows.length, drift, suspended, destroyed });
 }

@@ -98,6 +98,7 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
         <div className="mt-3 space-y-3 text-sm">
           {agent.slug && (
             <DashboardAccess
+              agentId={agent.id}
               slug={agent.slug}
               password={dashboardPassword}
               running={agent.status === "running"}

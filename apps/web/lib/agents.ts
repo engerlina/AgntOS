@@ -62,6 +62,33 @@ export async function getAgentForUser(userId: string, agentId: string) {
   return row ?? null;
 }
 
+/**
+ * Strip server-only / secret columns before an agent row is sent to the browser.
+ * The ciphertexts are useless without ENCRYPTION_KEY and the Fly ids are internal,
+ * but there's no reason to ship them into browser memory/history/logs.
+ */
+export function toPublicAgent<
+  T extends {
+    webPasswordCipher?: unknown;
+    dashboardPasswordCipher?: unknown;
+    openrouterKeyHash?: unknown;
+    flyAppId?: unknown;
+    flyMachineId?: unknown;
+    flyVolumeId?: unknown;
+  },
+>(a: T) {
+  const {
+    webPasswordCipher: _w,
+    dashboardPasswordCipher: _d,
+    openrouterKeyHash: _k,
+    flyAppId: _a,
+    flyMachineId: _m,
+    flyVolumeId: _v,
+    ...pub
+  } = a;
+  return pub;
+}
+
 export interface CreateAgentInput {
   name: string;
   slug: string;
@@ -151,15 +178,23 @@ export async function pauseAgent(userId: string, agentId: string) {
   return row;
 }
 
-export async function resumeAgent(userId: string, agentId: string) {
+export type ResumeResult =
+  | { ok: true; row: Awaited<ReturnType<typeof getAgentForUser>> }
+  | { ok: false; reason: "not_found" | "not_entitled" };
+
+export async function resumeAgent(userId: string, agentId: string): Promise<ResumeResult> {
   const row = await getAgentForUser(userId, agentId);
-  if (!row) return null;
+  if (!row) return { ok: false, reason: "not_found" };
+  // Don't let a lapsed (or never-subscribed) user restart a Fly machine — they
+  // could otherwise re-resume after every hourly reconcile pause for free compute.
+  const tier = await getActiveTier(userId);
+  if (!tier) return { ok: false, reason: "not_entitled" };
   await enqueue(QUEUE.resumeAgent, { agentId }, { singletonKey: agentId });
   await db
     .update(agent)
     .set({ status: "provisioning", updatedAt: new Date() })
     .where(eq(agent.id, agentId));
-  return row;
+  return { ok: true, row };
 }
 
 export async function destroyAgent(userId: string, agentId: string) {

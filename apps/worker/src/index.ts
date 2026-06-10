@@ -4,6 +4,7 @@ import { config } from "dotenv";
 import PgBoss, { type Job } from "pg-boss";
 
 import { env, log, QUEUE, type JobPayloads, type QueueName } from "@agntos/core";
+import { migrateToLatest } from "@agntos/db/migrate";
 
 import { handleProvision } from "./handlers/provision";
 import {
@@ -15,6 +16,7 @@ import {
 } from "./handlers/lifecycle";
 import { handleReconcile } from "./handlers/reconcile";
 import { handleSyncUsage } from "./handlers/usage";
+import { captureError, flushSentry, initSentry } from "./sentry";
 
 // Load the repo-root .env (one file drives web + worker + migrations). Safe
 // because @agntos/db is lazy — no env is read during the import phase above; the
@@ -27,13 +29,23 @@ config({ path: fileURLToPath(new URL("../../../.env", import.meta.url)) });
  * Shares one Postgres with the control plane (the queue lives in that DB).
  */
 async function main() {
+  initSentry();
+
+  // Apply pending schema migrations before doing anything else, so a deploy
+  // can't run against an out-of-date database. Idempotent.
+  log.info("applying database migrations…");
+  await migrateToLatest();
+
   const boss = new PgBoss({
     connectionString: env().DATABASE_URL,
     // Full supervisor here — this process owns maintenance + scheduling.
     application_name: "agntos-worker",
   });
 
-  boss.on("error", (err) => log.error("pg-boss error", { error: String(err) }));
+  boss.on("error", (err) => {
+    log.error("pg-boss error", { error: String(err) });
+    captureError(err, { source: "pg-boss" });
+  });
 
   await boss.start();
   for (const q of Object.values(QUEUE)) await boss.createQueue(q);
@@ -45,7 +57,13 @@ async function main() {
   ) {
     await boss.work<JobPayloads[Q]>(queue, async (jobs: Job<JobPayloads[Q]>[]) => {
       for (const job of jobs) {
-        await handler(job.data);
+        try {
+          await handler(job.data);
+        } catch (err) {
+          // Report, then rethrow so pg-boss still applies retry/backoff.
+          captureError(err, { queue, jobId: job.id });
+          throw err;
+        }
       }
     });
   }
@@ -74,6 +92,7 @@ async function main() {
     try {
       await boss.stop({ graceful: true, timeout: 30_000 });
     } finally {
+      await flushSentry();
       process.exit(0);
     }
   };
@@ -81,7 +100,10 @@ async function main() {
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   log.error("worker failed to start", { error: String(err) });
+  initSentry();
+  captureError(err, { source: "startup" });
+  await flushSentry();
   process.exit(1);
 });

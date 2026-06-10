@@ -37,12 +37,19 @@ const schema = z.object({
   FLY_REGION: z.string().default("syd"),
   AGENT_IMAGE_REF: z.string().optional(),
 
+  // ── Cloudflare DNS (worker — per-agent <slug>.agntos.net) ────────────────
+  CLOUDFLARE_API_TOKEN: z.string().optional(),
+  AGENT_DOMAIN: z.string().default("agntos.net"),
+
+  // ── Database TLS hardening (optional) ────────────────────────────────────
+  DATABASE_CA_CERT: z.string().optional(),
+
   // ── Tokens (OpenRouter) ──────────────────────────────────────────────────
   OPENROUTER_API_KEY: z.string().optional(),
   OPENROUTER_PROVISIONING_KEY: z.string().optional(),
 
-  // ── Crypto (BYOK at rest) ────────────────────────────────────────────────
-  // 32-byte key, base64 or hex. Used by libsodium secretbox in crypto.ts.
+  // ── Crypto (secrets at rest) ─────────────────────────────────────────────
+  // 32-byte key, base64 or hex. Used by AES-256-GCM in crypto.ts.
   ENCRYPTION_KEY: z.string().optional(),
 
   // ── Observability ────────────────────────────────────────────────────────

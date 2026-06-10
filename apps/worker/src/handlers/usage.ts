@@ -1,10 +1,11 @@
-import { log, mcToUsd, usdToMc } from "@agntos/core";
-import { getBalance, recordUsage } from "@agntos/core/billing";
-import { getRuntimeKey, updateRuntimeKeyLimit } from "@agntos/core/openrouter";
+import { log, usdToMc } from "@agntos/core";
+import { getBalance } from "@agntos/core/billing";
+import { updateRuntimeKeyLimit } from "@agntos/core/openrouter";
 import { sendEmail } from "@agntos/core/email";
-import { agent, db, eq, sql, usageEvent, user, wallet } from "@agntos/db";
+import { agent, db, eq, sql, user, wallet } from "@agntos/db";
 
 import { handlePause } from "./lifecycle";
+import { meterKeyUsage } from "./metering";
 
 // Low-balance email fires when the wallet drops below this absolute floor.
 // (A percentage threshold needs a baseline — e.g. last top-up — which you can
@@ -33,40 +34,16 @@ export async function handleSyncUsage(): Promise<void> {
 
 async function syncOne(row: typeof agent.$inferSelect): Promise<void> {
   if (!row.openrouterKeyHash) return;
+  const hash = row.openrouterKeyHash;
 
-  const key = await getRuntimeKey(row.openrouterKeyHash);
-  const cumulativeMc = usdToMc(key.usage);
-
-  const [agg] = await db
-    .select({ total: sql<number>`coalesce(sum(${usageEvent.costMc}), 0)` })
-    .from(usageEvent)
-    .where(eq(usageEvent.agentId, row.id));
-  const recordedMc = Number(agg?.total ?? 0);
-  const deltaMc = cumulativeMc - recordedMc;
-
-  if (deltaMc > 0) {
-    // Idempotent: externalId encodes the cumulative reading.
-    await db
-      .insert(usageEvent)
-      .values({
-        agentId: row.id,
-        userId: row.userId,
-        model: null,
-        costMc: deltaMc,
-        externalId: `${row.openrouterKeyHash}:${cumulativeMc}`,
-        occurredAt: new Date(),
-      })
-      .onConflictDoNothing({ target: usageEvent.externalId });
-    await recordUsage({ userId: row.userId, amountMc: deltaMc, meta: { agentId: row.id } });
-    log.info("usage recorded", { agentId: row.id, deltaUsd: mcToUsd(deltaMc) });
-  }
+  const { cumulativeMc } = await meterKeyUsage(row.id, row.userId, hash);
 
   const balanceMc = await getBalance(row.userId);
 
   // Keep the OpenRouter cap == spent-so-far + remaining-balance, so the cap
   // tracks the wallet (top-ups raise it; depletion stops the agent).
-  await updateRuntimeKeyLimit(row.openrouterKeyHash, cumulativeMc + Math.max(balanceMc, 0)).catch(
-    (e) => log.warn("usage: limit update failed", { agentId: row.id, error: String(e) }),
+  await updateRuntimeKeyLimit(hash, cumulativeMc + Math.max(balanceMc, 0)).catch((e) =>
+    log.warn("usage: limit update failed", { agentId: row.id, error: String(e) }),
   );
 
   await handleBalanceThresholds(row, balanceMc);

@@ -14,6 +14,14 @@ WORKDIR /app
 COPY . .
 RUN pnpm install --frozen-lockfile
 
-# tsx runs the TypeScript worker directly; all config comes from Railway env vars
-# (the dotenv load of ../../.env is a no-op here — there is no .env in the image).
-CMD ["pnpm", "--filter", "@agntos/worker", "start"]
+# Belt-and-braces: the non-payment suspension + reconcile retention passes are
+# gated on NODE_ENV=production. Railway sets this too, but bake it in so the
+# enforcement can't silently no-op if the service var is ever missing.
+ENV NODE_ENV=production
+
+# Run the worker as `node --import tsx` from the worker dir (cwd resolves `tsx`
+# from its own node_modules). This makes node itself PID 1 — going through
+# `pnpm`/`tsx` CLI forks a child, so SIGTERM never reaches it and pg-boss's
+# graceful stop (drain in-flight jobs) never runs before Railway SIGKILLs.
+WORKDIR /app/apps/worker
+CMD ["node", "--import", "tsx", "src/index.ts"]

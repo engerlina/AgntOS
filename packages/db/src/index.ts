@@ -1,5 +1,8 @@
-export { db, getPool } from "./client";
+export { db, getPool, sslConfig } from "./client";
 export type { Database } from "./client";
+// NOTE: `migrateToLatest` is intentionally NOT re-exported here — it references
+// the ./drizzle migrations folder, which a frontend bundler can't resolve. The
+// worker imports it directly from "@agntos/db/migrate".
 export * as schema from "./schema";
 export * from "./schema";
 
@@ -14,6 +17,7 @@ export {
   gte,
   inArray,
   isNull,
+  like,
   lt,
   lte,
   ne,

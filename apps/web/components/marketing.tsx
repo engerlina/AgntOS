@@ -39,9 +39,18 @@ export function SiteFooter() {
           © {new Date().getFullYear()} AgntOS · Vertial Holdings Pty Ltd. Built on Hermes Agent by
           Nous Research.
         </p>
-        <div className="flex gap-4 font-mono text-xs text-ink">
+        <div className="flex flex-wrap gap-4 font-mono text-xs text-ink">
           <Link href="/pricing" className="no-underline hover:underline">
             Pricing
+          </Link>
+          <Link href="/support" className="no-underline hover:underline">
+            Support
+          </Link>
+          <Link href="/terms" className="no-underline hover:underline">
+            Terms
+          </Link>
+          <Link href="/privacy" className="no-underline hover:underline">
+            Privacy
           </Link>
           <Link href="/login" className="no-underline hover:underline">
             Log in

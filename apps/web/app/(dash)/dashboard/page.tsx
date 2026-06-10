@@ -63,7 +63,7 @@ export default async function DashboardPage() {
           <h2 className="text-2xl">Launch your first agent</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted">
             Give it a name and personality, connect Telegram, and it&apos;ll be live in under two
-            minutes — messaging you first.
+            minutes — ready for your first message.
           </p>
           <ButtonLink href="/onboarding" variant="primary" className="mt-6">
             <Plus className="h-4 w-4" /> Create an agent

@@ -21,10 +21,14 @@ export function DashboardLauncher({
 }) {
   const [message, setMessage] = useState("Waking up your agent…");
   const [tooLong, setTooLong] = useState(false);
+  // Set when the agent is in a state that will never become ready on its own
+  // (error / paused / stopped) — we stop polling and tell the user what to do.
+  const [terminal, setTerminal] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     let tries = 0;
+    const TERMINAL = new Set(["error", "paused", "stopped"]);
     // Token in the query string (NOT credentials in the URL — that breaks the
     // dashboard's fetches). /__enter validates it, sets a cookie, and 302s to the
     // clean /chat URL, so window.location ends up credential-free.
@@ -40,6 +44,10 @@ export function DashboardLauncher({
         if (data.ready) {
           setMessage("Opening your dashboard…");
           window.location.replace(directUrl);
+          return;
+        }
+        if (data.status && TERMINAL.has(data.status)) {
+          setTerminal(data.status); // stop polling — won't recover on its own
           return;
         }
         setMessage(
@@ -58,6 +66,32 @@ export function DashboardLauncher({
       cancelled = true;
     };
   }, [agentId, slug, cookieKey]);
+
+  if (terminal) {
+    const copy: Record<string, string> = {
+      paused: "Your agent is paused. Resume it, then try opening the dashboard again.",
+      stopped: "This agent has been stopped.",
+      error: "Your agent hit a problem starting up. Check its status, or contact support.",
+    };
+    return (
+      <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 text-center">
+        <div className="w-full max-w-md border-2 border-ink bg-paper p-8 shadow-[6px_6px_0_0_var(--color-ink)]">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-faint">Hermes dashboard</p>
+          <h1 className="mt-1 text-2xl">{agentName}</h1>
+          <p className="mt-6 text-sm text-muted">{copy[terminal] ?? "This agent isn't available right now."}</p>
+          <p className="mt-1 font-mono text-xs text-faint">{slug}.agntos.net</p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Link href={`/dashboard/agents/${agentId}`} className="btn btn-dark">
+              Back to the agent
+            </Link>
+            <Link href="/support" className="btn btn-ghost">
+              Support
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 text-center">

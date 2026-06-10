@@ -15,6 +15,21 @@ const globalForDb = globalThis as unknown as {
   __agntosDb?: NodePgDatabase<typeof schema>;
 };
 
+/**
+ * TLS config for the Postgres pool.
+ *  - localhost → no TLS.
+ *  - DATABASE_CA_CERT set → verify the server cert against it (`rejectUnauthorized`).
+ *    Set this (the provider's CA PEM, newlines as `\n`) to harden the connection.
+ *  - otherwise → encrypted but unverified. Required for providers whose proxy
+ *    (e.g. Railway's TCP proxy) presents a cert that doesn't chain to a public CA.
+ */
+export function sslConfig(connectionString: string): false | { rejectUnauthorized: boolean; ca?: string } {
+  if (connectionString.includes("localhost") || connectionString.includes("127.0.0.1")) return false;
+  const ca = process.env.DATABASE_CA_CERT?.replace(/\\n/g, "\n");
+  if (ca) return { ca, rejectUnauthorized: true };
+  return { rejectUnauthorized: false };
+}
+
 function makePool(): Pool {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
@@ -22,8 +37,7 @@ function makePool(): Pool {
   }
   return new Pool({
     connectionString,
-    // Managed Postgres (Railway/Supabase/etc.) needs TLS; local doesn't.
-    ssl: connectionString.includes("localhost") ? false : { rejectUnauthorized: false },
+    ssl: sslConfig(connectionString),
     max: Number(process.env.DATABASE_POOL_MAX ?? 10),
   });
 }

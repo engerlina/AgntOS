@@ -17,6 +17,8 @@ import {
 } from "@agntos/core/provisioning";
 import { agent, and, auditLog, channel, db, eq } from "@agntos/db";
 
+import { meterKeyUsage } from "./metering";
+
 type AgentRow = typeof agent.$inferSelect;
 
 function refOf(row: AgentRow): AgentRef | null {
@@ -75,6 +77,14 @@ export async function handleDestroy(data: DestroyAgentJob): Promise<void> {
   const row = await load(data.agentId);
   if (!row) return; // already gone — destroy is idempotent
   const ref = refOf(row);
+  // Bill any spend since the last usage sync BEFORE we delete the key, otherwise
+  // the final (up to ~2-min) window is free — exploitable as top-up → burn →
+  // destroy → recreate. Best-effort: a metering failure must not block teardown.
+  if (row.openrouterKeyHash) {
+    await meterKeyUsage(row.id, row.userId, row.openrouterKeyHash).catch((e) =>
+      log.warn("destroy: final usage meter failed", { agentId: row.id, error: String(e) }),
+    );
+  }
   if (ref) {
     await getProvider().destroy(ref);
   }

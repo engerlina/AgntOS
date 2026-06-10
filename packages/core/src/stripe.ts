@@ -18,7 +18,7 @@ let cached: Stripe | null = null;
 export function stripe(): Stripe {
   if (cached) return cached;
   cached = new Stripe(requireEnv("STRIPE_SECRET_KEY"), {
-    appInfo: { name: "AgntOS", url: "https://agntos.io" },
+    appInfo: { name: "AgntOS", url: "https://agntos.net" },
     typescript: true,
   });
   return cached;
@@ -43,6 +43,10 @@ export async function createCreditCheckout(input: CreditCheckoutInput): Promise<
 
   const session = await s.checkout.sessions.create({
     mode: "payment",
+    // Cards settle synchronously, so `checkout.session.completed` arrives `paid`.
+    // (Async methods would fire `completed` while still `unpaid`, which our
+    // handler now guards against — but pinning to card avoids the case entirely.)
+    payment_method_types: ["card"],
     customer: input.stripeCustomerId,
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,

@@ -88,8 +88,8 @@ export default function LandingPage() {
               whole setup — no apps, no settings.
             </Step>
             <Step n="02" icon={<Rocket />} title="It goes live">
-              In a couple of minutes it&apos;s ready and private to you. It even sends you the first
-              message.
+              In a couple of minutes it&apos;s ready and private to you. Say hello and it gets
+              straight to work.
             </Step>
             <Step n="03" icon={<MessageSquare />} title="Put it to work">
               Chat with it on the web, or message it on Telegram like a colleague. It remembers
@@ -238,8 +238,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-4xl px-5 py-20 text-center">
           <h2 className="text-4xl sm:text-5xl">Your assistant is one click away.</h2>
           <p className="mx-auto mt-5 max-w-xl text-lg text-ink/80">
-            Set it up, give it a name, and it&apos;ll be ready — and message you first — in a couple
-            of minutes.
+            Set it up, give it a name, and it&apos;ll be ready to chat in a couple of minutes.
           </p>
           <div className="mt-8 flex justify-center">
             <ButtonLink href="/signup" variant="dark" className="text-base">

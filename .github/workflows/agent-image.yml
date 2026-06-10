@@ -35,9 +35,13 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # `agent-v0.1.0` is not valid semver, so `type=semver` skips it. Match the
+          # `agent-` prefix and emit the captured `v0.1.0` as the image tag, so the
+          # documented pin (…/agntos-hermes:v0.1.0) actually exists. `sha-<short>`
+          # tags give immutable pins for AGENT_IMAGE_REF; no `:latest` is pushed.
           tags: |
             type=ref,event=branch
-            type=semver,pattern={{version}},prefix=v,event=tag
+            type=match,pattern=agent-(v.*),group=1
             type=sha,format=short
 
       - name: Set up Buildx

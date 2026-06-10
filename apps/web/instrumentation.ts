@@ -1,27 +1,39 @@
 /**
- * Server/edge observability bootstrap (Next.js `register` hook).
+ * Server-side observability (Next.js `register` + `onRequestError` hooks).
  *
- * Sentry is OPTIONAL and loaded only when both (a) `@sentry/nextjs` is installed
- * and (b) `SENTRY_DSN` is set — so the scaffold builds without it. To enable:
- *   pnpm --filter @agntos/web add @sentry/nextjs
- *   # set SENTRY_DSN in the environment
- * The dynamic specifier is intentionally non-literal so the bundler doesn't try
- * to resolve the package when it isn't installed.
+ * Sentry is OPTIONAL — active only when `SENTRY_DSN` is set. We use `@sentry/node`
+ * and load it via a runtime dynamic import (non-literal specifier + webpackIgnore)
+ * so the bundler never pulls its Node-only internals (e.g. node:child_process)
+ * into the Edge instrumentation bundle. The NEXT_RUNTIME guard means it only ever
+ * loads in the Node.js runtime at runtime.
  */
-export async function register() {
-  const dsn = process.env.SENTRY_DSN;
-  if (!dsn) return;
+const SENTRY_PKG = ["@sentry", "node"].join("/");
+
+type SentryModule = {
+  init: (opts: Record<string, unknown>) => void;
+  captureException: (e: unknown) => void;
+};
+
+async function loadSentry(): Promise<SentryModule | null> {
+  if (process.env.NEXT_RUNTIME !== "nodejs" || !process.env.SENTRY_DSN) return null;
   try {
-    const pkg = ["@sentry", "nextjs"].join("/");
-    const Sentry = (await import(/* webpackIgnore: true */ pkg)) as {
-      init?: (opts: Record<string, unknown>) => void;
-    };
-    Sentry.init?.({
-      dsn,
-      tracesSampleRate: 0.1,
-      environment: process.env.NODE_ENV,
-    });
+    return (await import(/* webpackIgnore: true */ SENTRY_PKG)) as unknown as SentryModule;
   } catch {
-    // @sentry/nextjs not installed — skip.
+    return null;
   }
+}
+
+export async function register() {
+  const Sentry = await loadSentry();
+  Sentry?.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV,
+    tracesSampleRate: 0,
+  });
+}
+
+/** Capture uncaught errors thrown while rendering routes / handling requests. */
+export async function onRequestError(error: unknown): Promise<void> {
+  const Sentry = await loadSentry();
+  Sentry?.captureException(error);
 }

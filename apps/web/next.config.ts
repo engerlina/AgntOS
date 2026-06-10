@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   // here because bundling it pulls in its kysely adapter, whose dialects import
   // kysely internals that aren't present in the resolved version — it must load
   // from node_modules at runtime instead.
-  serverExternalPackages: ["pg", "pg-boss", "better-auth", "@better-auth/stripe"],
+  serverExternalPackages: ["pg", "pg-boss", "better-auth", "@better-auth/stripe", "@sentry/node"],
   eslint: {
     // Lint in CI, don't block production builds on style.
     ignoreDuringBuilds: true,

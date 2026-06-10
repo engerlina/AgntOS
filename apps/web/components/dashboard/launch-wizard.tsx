@@ -205,7 +205,7 @@ export function LaunchWizard() {
           </dl>
           <p className="font-mono text-xs text-faint">
             We&apos;ll provision an isolated micro-VM, boot Hermes, mint a capped spend key, and your
-            agent will message you first.
+            agent will be ready to chat.
           </p>
         </div>
       )}

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { sql } from "drizzle-orm";
-
-import { db } from "@agntos/db";
+// Import `sql` from @agntos/db (not drizzle-orm directly) so it shares the same
+// drizzle instance as `db` — otherwise peer-variant duplication breaks the types.
+import { db, sql } from "@agntos/db";
 
 /** Liveness + DB connectivity probe (used by uptime monitoring). */
 export async function GET() {
