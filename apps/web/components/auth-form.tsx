@@ -7,7 +7,13 @@ import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { Button, Field } from "@/components/ui";
 
-export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+export function AuthForm({
+  mode,
+  googleEnabled = false,
+}: {
+  mode: "login" | "signup";
+  googleEnabled?: boolean;
+}) {
   const router = useRouter();
   const params = useSearchParams();
   const redirectTo = params.get("redirect") || "/dashboard";
@@ -136,15 +142,19 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         </p>
       )}
 
-      <div className="flex items-center gap-3 py-1">
-        <span className="h-px flex-1 bg-hair" />
-        <span className="font-mono text-xs text-faint">or</span>
-        <span className="h-px flex-1 bg-hair" />
-      </div>
+      {googleEnabled && (
+        <>
+          <div className="flex items-center gap-3 py-1">
+            <span className="h-px flex-1 bg-hair" />
+            <span className="font-mono text-xs text-faint">or</span>
+            <span className="h-px flex-1 bg-hair" />
+          </div>
 
-      <Button type="button" variant="ghost" className="w-full" onClick={onGoogle}>
-        Continue with Google
-      </Button>
+          <Button type="button" variant="ghost" className="w-full" onClick={onGoogle}>
+            Continue with Google
+          </Button>
+        </>
+      )}
 
       <p className="pt-2 text-center font-mono text-xs text-muted">
         {mode === "signup" ? (
