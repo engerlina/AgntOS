@@ -22,13 +22,20 @@ export function SubscribeButton({
     setBusy(true);
     try {
       const origin = window.location.origin;
-      const { error } = await authClient.subscription.upgrade({
+      const { data, error } = await authClient.subscription.upgrade({
         plan,
         successUrl: `${origin}/dashboard?subscribed=1`,
         cancelUrl: `${origin}/dashboard/billing`,
       });
-      // On success the plugin redirects to Stripe Checkout; only errors return here.
       if (error) throw new Error(error.message || "Could not start checkout");
+      // The endpoint returns the Stripe Checkout URL — follow it. (The client
+      // doesn't auto-redirect, so without this the button just hangs.)
+      const url = (data as { url?: string } | null)?.url;
+      if (url) {
+        window.location.href = url;
+        return;
+      }
+      throw new Error("Could not start checkout — no URL returned. Try again or contact support.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start checkout");
       setBusy(false);

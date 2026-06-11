@@ -109,8 +109,9 @@ export default function LandingPage() {
             yourself — and it gets more useful the more you use it.
           </Feature>
           <Feature icon={<ListChecks />} title="Handles the busywork">
-            Summarize your inbox, draft replies, chase follow-ups, do research. It takes care of
-            repetitive tasks and learns your routines so it gets faster over time.
+            Draft messages and docs in your voice, turn messy notes into clear next steps, think
+            problems through, and summarize anything you hand it — and it learns your routines so it
+            gets faster over time.
           </Feature>
           <Feature icon={<Wallet />} title="You control the cost">
             See exactly what it costs in plain dollars and set your own limit. It can never run up a
@@ -167,7 +168,10 @@ export default function LandingPage() {
           <div>
             <Eyebrow>Simple pricing</Eyebrow>
             <h2 className="mt-3 text-3xl sm:text-4xl">Pick a plan, then pay as you go.</h2>
-            <p className="mt-3 text-muted">Pause anytime. No contracts, no lock-in.</p>
+            <p className="mt-3 text-muted">
+              About a dollar a day for an assistant that knows your work — and a budget you set, so
+              it never surprises you. Pause anytime, no contracts.
+            </p>
           </div>
           <Link href="/pricing" className="font-mono text-sm font-semibold text-ink hover:underline">
             Full pricing →
@@ -205,6 +209,13 @@ export default function LandingPage() {
           <Eyebrow>Common questions</Eyebrow>
           <h2 className="mt-3 text-3xl sm:text-4xl">The honest answers</h2>
           <div className="mt-8 divide-y-2 divide-hair border-y-2 border-line">
+            <Faq q="How is this different from ChatGPT?">
+              ChatGPT forgets you between chats and lives in a browser tab. AgntOS is{" "}
+              <em>your</em> assistant on its own private machine: it remembers your clients,
+              preferences and voice and gets better the more you use it, it lives where you already
+              are — the web and Telegram — and it runs on a dollar budget you set. Less a chatbot you
+              visit, more an assistant that knows you.
+            </Faq>
             <Faq q="Will it cost a fortune?">
               No. You see the cost in plain dollars and set your own limit, so it can never run up a
               surprise bill. Top up only when you want, and pause anytime.
@@ -218,8 +229,10 @@ export default function LandingPage() {
               message, you&apos;re ready to go.
             </Faq>
             <Faq q="What can it actually do for me?">
-              Remember your context, draft and summarize, do research, track tasks and follow-ups,
-              and take care of repetitive work — and it learns how you like things done over time.
+              Remember your clients, preferences and tone; draft messages and documents in your
+              voice; turn notes and pasted text into clear summaries and next steps; think problems
+              through with you; and keep track of what matters. It gets more useful the more you use
+              it.
             </Faq>
             <Faq q="How do I talk to it?">
               Two easy ways, both included: a simple private space on the web, and Telegram — message
@@ -261,14 +274,14 @@ function ChatMock() {
         <span className="font-mono text-xs font-semibold text-lime">Your assistant</span>
       </div>
       <div className="space-y-3 p-4 text-sm">
-        <Bubble who="you">summarize today&apos;s meetings and send me the action items</Bubble>
+        <Bubble who="you">draft a follow-up to Henderson about the proposal</Bubble>
         <Bubble who="agent">
-          Done — sent to your inbox. 4 action items, 2 are yours. Want me to do this automatically
-          every evening? ✅
+          Here&apos;s a draft — short and direct, like your last few. Want me to remember
+          Henderson&apos;s on a fixed fee so I keep pricing out of these? ✅
         </Bubble>
-        <Bubble who="you">yes please</Bubble>
+        <Bubble who="you">yes, and they prefer bullet points</Bubble>
         <Bubble who="agent">
-          Set. I&apos;ll handle it at 5pm daily and remember how you like the summary. 👍
+          Noted — I&apos;ll keep Henderson&apos;s notes and use bullets for them from now on. 👍
         </Bubble>
       </div>
     </div>
@@ -286,13 +299,13 @@ function AssistantMock() {
       <div className="space-y-2 p-3 text-sm">
         <div className="flex justify-end">
           <span className="max-w-[85%] border border-paper/20 bg-paper/10 px-2.5 py-1.5 text-paper">
-            draft a reply to the supplier and chase the overdue invoice
+            turn these messy call notes into next steps
           </span>
         </div>
         <div className="flex justify-start">
           <span className="max-w-[88%] border-2 border-lime bg-lime px-2.5 py-1.5 text-ink">
-            Reply drafted in your inbox, and I&apos;ve flagged the invoice — I&apos;ll nudge them
-            again Friday if there&apos;s no answer. ✓
+            Done — 5 clear actions with owners marked. I&apos;ve saved the client preferences you
+            mentioned, so I&apos;ll factor them in next time. ✓
           </span>
         </div>
       </div>

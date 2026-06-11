@@ -80,6 +80,12 @@ export default function PricingPage() {
 
       {/* FAQ */}
       <div className="mt-16 grid gap-6 md:grid-cols-2">
+        <Faq q="How is this different from ChatGPT?">
+          ChatGPT forgets you between chats and lives in a tab. AgntOS is your own assistant on its
+          own private machine — it remembers your clients, preferences and voice, lives where you
+          already are (web + Telegram), and runs on a dollar budget you set. It gets more useful the
+          more you use it.
+        </Faq>
         <Faq q="What is a Hermes agent?">
           Hermes is the self-hosted autonomous agent by Nous Research. It reasons, calls tools, keeps
           long-term memory, and writes its own reusable skills. AgntOS hosts and manages one for you.

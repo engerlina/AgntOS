@@ -5,16 +5,18 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button, Card, Field, TextArea } from "@/components/ui";
+import { ARCHETYPES } from "@/lib/archetypes";
 import { AGENT_DOMAIN, slugError, slugify } from "@/lib/slug";
 import { cn } from "@/lib/utils";
 
-const STEPS = ["Name", "Personality", "Connect", "Launch"] as const;
+const STEPS = ["Name", "Role", "Connect", "Launch"] as const;
 
 export function LaunchWizard() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [personality, setPersonality] = useState("");
+  const [archetype, setArchetype] = useState<string | null>(null);
   const [botToken, setBotToken] = useState("");
   const [botUsername, setBotUsername] = useState("");
   const [pending, setPending] = useState(false);
@@ -150,14 +152,41 @@ export function LaunchWizard() {
 
       {step === 1 && (
         <div className="space-y-4">
-          <h2 className="text-2xl">Give it a personality</h2>
-          <TextArea
-            label="Personality & instructions"
-            value={personality}
-            onChange={(e) => setPersonality(e.target.value)}
-            placeholder="You're a concise, proactive executive assistant. You manage my reminders, summarise emails, and never use corporate jargon."
-            hint="Optional — you can refine this any time by talking to your agent."
-          />
+          <h2 className="text-2xl">What should it do for you?</h2>
+          <p className="text-sm text-muted">
+            Pick a starting point and we&apos;ll set it up with the right personality. You can fine-tune
+            the wording below, and refine it any time just by talking to your agent.
+          </p>
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {ARCHETYPES.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => {
+                  setArchetype(a.id);
+                  setPersonality(a.persona);
+                }}
+                className={cn(
+                  "border-2 px-3.5 py-3 text-left transition-colors",
+                  archetype === a.id
+                    ? "border-ink bg-lime"
+                    : "border-line bg-paper hover:border-ink",
+                )}
+              >
+                <span className="block text-sm font-semibold text-ink">{a.label}</span>
+                <span className="mt-0.5 block text-xs text-muted">{a.blurb}</span>
+              </button>
+            ))}
+          </div>
+          {archetype && (
+            <TextArea
+              label="Fine-tune (optional)"
+              value={personality}
+              onChange={(e) => setPersonality(e.target.value)}
+              placeholder="You're a concise, proactive assistant who never uses corporate jargon."
+              hint="This is your agent's personality. Edit freely — or leave it as is."
+            />
+          )}
         </div>
       )}
 
