@@ -1,0 +1,21 @@
+# Build-context hygiene for the worker image (Dockerfile does `COPY . .` from the
+# repo root). Keeps secrets, local installs, and VCS junk out of the image; pnpm
+# install runs fresh inside the build, so the host node_modules isn't needed.
+node_modules
+**/node_modules
+
+# Secrets — never bake the real .env into the image (Railway injects env at runtime).
+.env
+.env.*
+!.env.example
+
+.git
+.github
+.next
+.vercel
+.playwright-mcp
+.turbo
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
