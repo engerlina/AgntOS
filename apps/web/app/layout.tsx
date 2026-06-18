@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Montserrat } from "next/font/google";
+import Script from "next/script";
 
 import { PostHogProvider } from "@/components/posthog-provider";
 import "./globals.css";
@@ -65,6 +66,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${montserrat.variable} ${ibmPlexMono.variable}`}>
       <body>
         <PostHogProvider>{children}</PostHogProvider>
+        {/* Vertial (Umami) web analytics */}
+        <Script
+          defer
+          src="https://analytics.vertial.com/script.js"
+          data-website-id="33812981-b443-4f24-9d88-98f638005e83"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );

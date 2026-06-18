@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { Button, Field } from "@/components/ui";
+import { VerifyNotice } from "@/components/verify-notice";
 
 export function AuthForm({
   mode,
@@ -24,6 +25,9 @@ export function AuthForm({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [verifySent, setVerifySent] = useState(false);
+  // Set when a login is blocked because the account's email isn't verified yet —
+  // we show the resend screen instead of a dead-end error.
+  const [needsVerify, setNeedsVerify] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,7 +45,15 @@ export function AuthForm({
         setVerifySent(true);
       } else {
         const { error } = await authClient.signIn.email({ email, password });
-        if (error) throw new Error(error.message || "Sign-in failed");
+        if (error) {
+          // Unverified accounts can't sign in (Better Auth → 403 EMAIL_NOT_VERIFIED).
+          // Route them to the resend screen rather than a generic failure.
+          if (error.code === "EMAIL_NOT_VERIFIED" || error.status === 403) {
+            setNeedsVerify(true);
+            return;
+          }
+          throw new Error(error.message || "Sign-in failed");
+        }
         router.push(redirectTo);
         router.refresh();
       }
@@ -57,22 +69,8 @@ export function AuthForm({
     await authClient.signIn.social({ provider: "google", callbackURL: redirectTo });
   }
 
-  if (verifySent) {
-    return (
-      <div className="text-center">
-        <div className="mx-auto grid h-12 w-12 place-items-center border-2 border-line bg-lime text-ink">
-          ✉
-        </div>
-        <h2 className="mt-4 text-2xl">Check your email</h2>
-        <p className="mt-2 text-sm text-muted">
-          We sent a verification link to <span className="font-semibold text-ink">{email}</span>.
-          Click it to activate your account, then log in.
-        </p>
-        <Link href="/login" className="mt-6 inline-block font-mono text-sm font-semibold text-ink">
-          ← Back to log in
-        </Link>
-      </div>
-    );
+  if (verifySent || needsVerify) {
+    return <VerifyNotice email={email} callbackURL={redirectTo} justSent={verifySent} />;
   }
 
   return (
