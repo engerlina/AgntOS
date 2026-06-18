@@ -40,6 +40,17 @@ export function LaunchWizard() {
     const t = setTimeout(async () => {
       try {
         const res = await fetch(`/api/agents/slug-available?slug=${encodeURIComponent(slug)}`);
+        if (!res.ok) {
+          // Couldn't verify (e.g. the session isn't recognised → 401). This is an
+          // advisory check, so don't block the wizard on it — leave availability
+          // "unknown" and let launch re-validate server-side.
+          setSlugState({
+            checking: false,
+            available: null,
+            reason: res.status === 401 ? "auth" : null,
+          });
+          return;
+        }
         const data = await res.json();
         setSlugState({ checking: false, available: !!data.available, reason: data.reason ?? null });
       } catch {
@@ -49,8 +60,14 @@ export function LaunchWizard() {
     return () => clearTimeout(t);
   }, [slug]);
 
+  // Gate step 0 on a VALID handle format — not on the (advisory, auth-required)
+  // availability check, which would otherwise freeze the wizard if the check is
+  // blocked. A handle that's genuinely taken is caught server-side at launch (409).
   const canNext =
-    (step === 0 && name.trim().length > 0 && slugState.available === true) ||
+    (step === 0 &&
+      name.trim().length > 0 &&
+      slugError(slug) === null &&
+      slugState.available !== false) ||
     step === 1 ||
     step === 2 || // Telegram is optional — web chat works without it
     step === 3;
@@ -75,6 +92,11 @@ export function LaunchWizard() {
         }),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        throw new Error(
+          "Your session isn't active in this browser. Please sign in again at /login, then relaunch.",
+        );
+      }
       if (res.status === 402) {
         throw new Error("You need an active plan first. Head to Billing to choose Starter or Pro.");
       }
@@ -143,6 +165,14 @@ export function LaunchWizard() {
                   <span className="text-fern">✓ available</span>
                 ) : slugState.available === false ? (
                   <span className="text-coral">✗ {slugState.reason ?? "unavailable"}</span>
+                ) : slugState.reason === "auth" ? (
+                  <span className="text-faint">
+                    couldn&apos;t verify —{" "}
+                    <a href="/login?redirect=/onboarding" className="underline">
+                      sign in again
+                    </a>{" "}
+                    if launch fails
+                  </span>
                 ) : null}
               </p>
             </div>
