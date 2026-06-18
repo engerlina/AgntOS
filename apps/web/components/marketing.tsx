@@ -1,34 +1,9 @@
 import Link from "next/link";
 
 import { Logo } from "@/components/brand";
-import { ButtonLink } from "@/components/ui";
 
-export function SiteHeader() {
-  return (
-    <header className="border-b-2 border-line bg-paper">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-        <Logo />
-        <nav className="flex items-center gap-2">
-          <Link
-            href="/pricing"
-            className="hidden px-3 font-mono text-sm font-semibold text-ink no-underline hover:underline sm:inline"
-          >
-            Pricing
-          </Link>
-          <Link
-            href="/login"
-            className="px-3 font-mono text-sm font-semibold text-ink no-underline hover:underline"
-          >
-            Log in
-          </Link>
-          <ButtonLink href="/signup" variant="primary">
-            Get your assistant
-          </ButtonLink>
-        </nav>
-      </div>
-    </header>
-  );
-}
+// Auth-aware + mobile-hamburger header lives in its own client component.
+export { SiteHeader } from "@/components/site-header";
 
 export function SiteFooter() {
   return (

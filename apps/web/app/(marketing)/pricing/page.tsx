@@ -7,6 +7,7 @@ import { ButtonLink, Card, Eyebrow } from "@/components/ui";
 export const metadata: Metadata = {
   title: "Pricing",
   description: "Two plans, prepaid model credits on top. No surprises — your agent has a hard spend cap.",
+  alternates: { canonical: "/pricing" },
 };
 
 export default function PricingPage() {
@@ -22,7 +23,11 @@ export default function PricingPage() {
 
       <div className="mt-12 grid gap-6 lg:grid-cols-2">
         {PLAN_LIST.map((plan, i) => (
-          <Card key={plan.tier} large className={i === 1 ? "ring-2 ring-lime ring-offset-2" : ""}>
+          <Card
+            key={plan.tier}
+            large
+            className={`flex h-full flex-col${i === 1 ? " ring-2 ring-lime ring-offset-2" : ""}`}
+          >
             <div className="flex items-baseline justify-between">
               <div>
                 <h2 className="text-3xl">{plan.name}</h2>
@@ -35,7 +40,7 @@ export default function PricingPage() {
                 <span className="text-base font-normal text-faint">/mo</span>
               </p>
             </div>
-            <ul className="mt-6 space-y-2.5 text-sm">
+            <ul className="mt-6 flex-1 space-y-2.5 text-sm">
               {plan.features.map((f) => (
                 <li key={f} className="flex gap-2">
                   <span className="text-fern">▪</span>

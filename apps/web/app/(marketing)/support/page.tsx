@@ -5,6 +5,7 @@ import { LegalList, LegalSection, LegalShell } from "@/components/legal";
 export const metadata: Metadata = {
   title: "Support",
   description: "Get help with your AgntOS agent.",
+  alternates: { canonical: "/support" },
 };
 
 export default function SupportPage() {

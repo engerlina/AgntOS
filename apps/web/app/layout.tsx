@@ -30,6 +30,11 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   manifest: "/site.webmanifest",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
   title: {
     default: "AgntOS — A personal AI assistant that remembers you",
     template: "%s · AgntOS",
@@ -50,14 +55,14 @@ export const metadata: Metadata = {
     url: "https://www.agntos.net",
     siteName: "AgntOS",
     type: "website",
-    images: [{ url: "/og.jpg", width: 929, height: 985, alt: "AgntOS" }],
+    // og:image is supplied by app/opengraph-image.tsx (1200×630).
   },
   twitter: {
     card: "summary_large_image",
     title: "AgntOS — A personal AI assistant that remembers you",
     description:
       "Your own AI assistant that remembers your work and handles the busywork — private to you, ready in minutes.",
-    images: ["/og.jpg"],
+    // twitter:image is supplied by app/opengraph-image.tsx.
   },
 };
 

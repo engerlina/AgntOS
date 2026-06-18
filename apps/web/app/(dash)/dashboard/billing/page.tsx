@@ -60,7 +60,11 @@ export default async function BillingPage() {
         {PLAN_LIST.map((plan, i) => {
           const isCurrent = currentPlan === plan.tier;
           return (
-            <Card key={plan.tier} large className={isCurrent ? "ring-2 ring-lime ring-offset-2" : ""}>
+            <Card
+              key={plan.tier}
+              large
+              className={`flex h-full flex-col${isCurrent ? " ring-2 ring-lime ring-offset-2" : ""}`}
+            >
               <div className="flex items-baseline justify-between">
                 <h2 className="text-2xl">{plan.name}</h2>
                 <p className="font-mono text-3xl font-bold text-ink">
@@ -68,7 +72,7 @@ export default async function BillingPage() {
                   <span className="text-sm font-normal text-faint">/mo</span>
                 </p>
               </div>
-              <ul className="my-5 space-y-2 text-sm">
+              <ul className="my-5 flex-1 space-y-2 text-sm">
                 {plan.features.map((f) => (
                   <li key={f} className="flex gap-2">
                     <span className="text-fern">▪</span>

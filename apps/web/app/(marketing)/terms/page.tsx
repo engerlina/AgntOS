@@ -5,6 +5,7 @@ import { LegalList, LegalSection, LegalShell } from "@/components/legal";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description: "The terms that govern your use of AgntOS.",
+  alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {

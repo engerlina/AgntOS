@@ -5,6 +5,7 @@ import { LegalList, LegalSection, LegalShell } from "@/components/legal";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "How AgntOS collects, uses, and protects your information.",
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {

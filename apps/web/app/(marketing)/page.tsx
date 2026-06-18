@@ -9,15 +9,65 @@ import {
   Wallet,
   Zap,
 } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PLAN_LIST } from "@agntos/core/billing";
 
 import { ButtonLink, Card, Eyebrow } from "@/components/ui";
 
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
+
+const SITE = "https://www.agntos.net";
+
+/** Structured data for search + AI engines (Organization, WebSite, the product). */
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE}/#organization`,
+      name: "AgntOS",
+      url: SITE,
+      logo: `${SITE}/android-chrome-512x512.png`,
+      description:
+        "One-click hosting for a personal AI assistant that remembers you — always-on, private, and reachable on the web or Telegram.",
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE}/#website`,
+      url: SITE,
+      name: "AgntOS",
+      publisher: { "@id": `${SITE}/#organization` },
+    },
+    {
+      "@type": "SoftwareApplication",
+      name: "AgntOS",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      url: SITE,
+      description:
+        "A personal AI assistant that remembers your work, drafts in your voice, and handles the busywork — private to you, with a hard spend cap you control.",
+      offers: PLAN_LIST.map((p) => ({
+        "@type": "Offer",
+        name: p.name,
+        price: String(p.monthlyUsd),
+        priceCurrency: "USD",
+        category: "subscription",
+      })),
+    },
+  ],
+};
+
 export default function LandingPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="border-b-2 border-line bg-cloud">
         <div className="mx-auto grid max-w-6xl gap-12 px-5 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:py-28">
@@ -179,7 +229,7 @@ export default function LandingPage() {
         </div>
         <div className="mt-10 grid gap-6 sm:grid-cols-2">
           {PLAN_LIST.map((plan) => (
-            <Card key={plan.tier} large>
+            <Card key={plan.tier} large className="flex h-full flex-col">
               <div className="flex items-baseline justify-between">
                 <h3 className="text-2xl">{plan.name}</h3>
                 <p className="font-mono text-2xl font-bold text-ink">
@@ -187,7 +237,7 @@ export default function LandingPage() {
                   <span className="text-sm font-normal text-faint">/mo</span>
                 </p>
               </div>
-              <ul className="mt-5 space-y-2 text-sm">
+              <ul className="mt-5 flex-1 space-y-2 text-sm">
                 {plan.features.map((f) => (
                   <li key={f} className="flex gap-2">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-fern" />
