@@ -42,10 +42,12 @@ if (hasEnv("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET")) {
       subscription: {
         enabled: true,
         plans: stripePlanConfig(),
-        // Apply Stripe Tax (GST/VAT/US sales tax) at subscription checkout.
+        // Apply Stripe Tax (GST/VAT/US sales tax) and let customers enter a promo
+        // code (e.g. the first-month-free coupon) at subscription checkout.
         getCheckoutSessionParams: () => ({
           params: {
             automatic_tax: { enabled: true },
+            allow_promotion_codes: true,
           },
         }),
         onSubscriptionComplete: async ({ subscription: sub }) => {
