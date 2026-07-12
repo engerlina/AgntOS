@@ -16,6 +16,7 @@ import {
 } from "./handlers/lifecycle";
 import { handleReconcile } from "./handlers/reconcile";
 import { handleSyncUsage } from "./handlers/usage";
+import { handleWeeklyDigest } from "./handlers/digest";
 import { captureError, flushSentry, initSentry } from "./sentry";
 
 // Load the repo-root .env (one file drives web + worker + migrations). Safe
@@ -76,10 +77,12 @@ async function main() {
   await work(QUEUE.reconfigureAgent, handleReconfigure);
   await work(QUEUE.reconcileLifecycle, async () => handleReconcile());
   await work(QUEUE.syncUsage, async () => handleSyncUsage());
+  await work(QUEUE.weeklyDigest, async () => handleWeeklyDigest());
 
   // Crons. pg-boss dedups schedules by queue name, so these are idempotent.
   await boss.schedule(QUEUE.reconcileLifecycle, "0 * * * *"); // hourly
   await boss.schedule(QUEUE.syncUsage, "*/2 * * * *"); // every 2 minutes
+  await boss.schedule(QUEUE.weeklyDigest, "0 22 * * 0"); // Sundays 22:00 UTC (Mon 08:00 Sydney)
 
   log.info("worker started", {
     queues: Object.values(QUEUE),

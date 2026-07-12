@@ -12,6 +12,7 @@ export const QUEUE = {
   reconfigureAgent: "reconfigure_agent",
   reconcileLifecycle: "reconcile_lifecycle",
   syncUsage: "sync_usage",
+  weeklyDigest: "weekly_digest",
 } as const;
 
 export type QueueName = (typeof QUEUE)[keyof typeof QUEUE];
@@ -52,6 +53,7 @@ export interface ReconfigureAgentJob {
 /** Cron jobs carry no payload. */
 export type ReconcileLifecycleJob = Record<string, never>;
 export type SyncUsageJob = Record<string, never>;
+export type WeeklyDigestJob = Record<string, never>;
 
 export interface JobPayloads {
   [QUEUE.provisionAgent]: ProvisionAgentJob;
@@ -62,4 +64,5 @@ export interface JobPayloads {
   [QUEUE.reconfigureAgent]: ReconfigureAgentJob;
   [QUEUE.reconcileLifecycle]: ReconcileLifecycleJob;
   [QUEUE.syncUsage]: SyncUsageJob;
+  [QUEUE.weeklyDigest]: WeeklyDigestJob;
 }

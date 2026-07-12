@@ -9,7 +9,7 @@
  * Physical column names are snake_case via `casing: "snake_case"` (drizzle.config
  * + the drizzle() client), so we don't repeat column-name strings.
  */
-import { boolean, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -21,6 +21,10 @@ export const user = pgTable("user", {
   image: text("image"),
   // Added by the @better-auth/stripe plugin:
   stripeCustomerId: text("stripe_customer_id"),
+  // First-touch marketing attribution (utm_*, gclid, referrer, landing path),
+  // captured client-side and written in the post-signup hook. Better Auth doesn't
+  // manage this column — we populate it directly. Null for OAuth/organic signups.
+  attribution: jsonb("attribution").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at")
     .$defaultFn(() => new Date())
     .notNull(),

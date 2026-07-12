@@ -3,7 +3,7 @@ import type Stripe from "stripe";
 import { log, QUEUE, usdToMc } from "@agntos/core";
 import { applyMovement, getBalance, recordTopup } from "@agntos/core/billing";
 import { sendEmail } from "@agntos/core/email";
-import { agent, creditTxn, db, eq, user } from "@agntos/db";
+import { agent, auditLog, creditTxn, db, eq, user } from "@agntos/db";
 
 import { enqueue } from "./boss";
 
@@ -112,6 +112,10 @@ async function creditTopup(s: Stripe.Checkout.Session): Promise<void> {
     meta: { sessionId: s.id },
   });
   if (res.applied) {
+    await db
+      .insert(auditLog)
+      .values({ userId, action: "wallet.topup", meta: { amountUsd } })
+      .catch((err) => log.error("audit topup failed", { userId, error: String(err) }));
     const email = await emailForUser(userId);
     if (email) await sendEmail.receipt(email, { description: "Wallet top-up", amountUsd });
     log.info("wallet topped up", { userId, amountUsd, balanceMc: res.balanceMc });

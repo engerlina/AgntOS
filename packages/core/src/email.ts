@@ -68,6 +68,29 @@ async function deliver(to: string, subject: string, html: string): Promise<void>
 }
 
 export const sendEmail = {
+  /** Internal founder-facing weekly numbers digest (not a customer email). */
+  weeklyDigest(to: string, opts: { period: string; rows: { label: string; value: string }[] }) {
+    const table = opts.rows
+      .map(
+        (r) =>
+          `<tr><td style="padding:7px 0;color:#464646">${r.label}</td>` +
+          `<td style="padding:7px 0;text-align:right;font-family:'IBM Plex Mono',monospace;` +
+          `font-weight:600;color:${INK}">${r.value}</td></tr>`,
+      )
+      .join("");
+    return deliver(
+      to,
+      `AgntOS weekly — ${opts.period}`,
+      layout(
+        "Weekly numbers",
+        `<p style="margin:0 0 14px">Snapshot for <strong>${opts.period}</strong>.</p>
+         <table role="presentation" width="100%" style="border-top:2px solid ${BORDER};
+           border-bottom:2px solid ${BORDER}">${table}</table>`,
+        { label: "Open dashboard", url: "https://www.agntos.net/dashboard" },
+      ),
+    );
+  },
+
   verify(to: string, url: string) {
     return deliver(
       to,

@@ -4,8 +4,13 @@ import { LegalList, LegalSection, LegalShell } from "@/components/legal";
 
 export const metadata: Metadata = {
   title: "Support",
-  description: "Get help with your AgntOS agent.",
+  description:
+    "Get help with your AgntOS assistant — billing and credits, connecting Telegram, memory, and account questions.",
   alternates: { canonical: "/support" },
+  openGraph: {
+    title: "AgntOS Support",
+    description: "Get help with your AgntOS assistant — billing, Telegram, memory, and account questions.",
+  },
 };
 
 export default function SupportPage() {

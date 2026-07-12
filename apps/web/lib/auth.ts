@@ -14,7 +14,7 @@ import {
 } from "@agntos/core/billing";
 import { sendEmail } from "@agntos/core/email";
 import { stripe as stripeClient } from "@agntos/core/stripe";
-import { account, db, session, subscription, user, verification } from "@agntos/db";
+import { account, auditLog, db, eq, session, subscription, user, verification } from "@agntos/db";
 
 import { handleStripeEvent } from "./stripe-events";
 
@@ -53,6 +53,7 @@ if (hasEnv("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET")) {
         onSubscriptionComplete: async ({ subscription: sub }) => {
           log.info("subscription complete", { referenceId: sub.referenceId, plan: sub.plan });
           await grantPlanCredits(sub.referenceId, sub.plan, sub.stripeSubscriptionId);
+          await auditSafe(sub.referenceId, "subscription.active", { plan: sub.plan });
         },
       },
     }) as unknown as BetterAuthPlugin,
@@ -88,15 +89,30 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user: u, url }) => {
       await sendEmail.verify(u.email, url);
     },
+    // Record WHEN the email was verified (the boolean flag has no timestamp) so
+    // the signup→verify funnel latency is reconstructable from audit_log.
+    afterEmailVerification: async (u) => {
+      await auditSafe(u.id, "user.verified");
+    },
   },
   socialProviders,
   databaseHooks: {
     user: {
       create: {
-        after: async (u) => {
+        after: async (u, ctx) => {
           // Provision a wallet + welcome the user as soon as the account exists.
           try {
             await ensureWallet(u.id);
+            // Persist first-touch attribution captured client-side (cookie).
+            const attr = parseAttrCookie(cookieFromCtx(ctx));
+            if (attr) {
+              await db
+                .update(user)
+                .set({ attribution: attr })
+                .where(eq(user.id, u.id))
+                .catch((err) => log.warn("attribution write failed", { userId: u.id, error: String(err) }));
+            }
+            await auditSafe(u.id, "user.signup", { source: attributionSource(attr) });
             // Comped accounts get free credits so AgntOS covers their model spend.
             if (isCompEmail(u.email)) {
               await grantCredits({
@@ -118,6 +134,51 @@ export const auth = betterAuth({
 });
 
 export type Auth = typeof auth;
+
+/** Insert an audit_log row without ever throwing into the auth flow. */
+async function auditSafe(
+  userId: string,
+  action: string,
+  meta?: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await db.insert(auditLog).values({ userId, action, meta });
+  } catch (err) {
+    log.error("audit insert failed", { action, error: String(err) });
+  }
+}
+
+/** Pull the raw Cookie header out of a Better Auth endpoint context. */
+function cookieFromCtx(ctx: unknown): string | null {
+  const c = ctx as
+    | { headers?: { get?(k: string): string | null }; request?: { headers?: { get?(k: string): string | null } } }
+    | null
+    | undefined;
+  return c?.headers?.get?.("cookie") ?? c?.request?.headers?.get?.("cookie") ?? null;
+}
+
+/** Parse the first-touch `agntos_attr` cookie set by AttributionCapture. */
+function parseAttrCookie(cookieHeader: string | null): Record<string, unknown> | null {
+  if (!cookieHeader) return null;
+  const part = cookieHeader.split(/;\s*/).find((c) => c.startsWith("agntos_attr="));
+  if (!part) return null;
+  try {
+    const obj = JSON.parse(decodeURIComponent(part.slice("agntos_attr=".length)));
+    return obj && typeof obj === "object" ? (obj as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Coarse acquisition-source label for the signup audit event. */
+function attributionSource(attr: Record<string, unknown> | null): string {
+  if (!attr) return "direct";
+  if (typeof attr.utm_source === "string" && attr.utm_source) return attr.utm_source;
+  if (attr.gclid || attr.wbraid || attr.gbraid) return "google_ads";
+  if (attr.fbclid) return "meta_ads";
+  if (attr.referrer) return "referral";
+  return "direct";
+}
 
 /**
  * Grant a plan's advertised "included credits" to the wallet on first activation.

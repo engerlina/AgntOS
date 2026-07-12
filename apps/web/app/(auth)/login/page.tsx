@@ -5,7 +5,11 @@ import { hasEnv } from "@agntos/core";
 
 import { AuthForm } from "@/components/auth-form";
 
-export const metadata: Metadata = { title: "Log in" };
+export const metadata: Metadata = {
+  title: "Log in",
+  // No search value; keeps a duplicate snippet out of the index.
+  robots: { index: false, follow: true },
+};
 
 export default function LoginPage() {
   const googleEnabled = hasEnv("GOOGLE_ID", "GOOGLE_SECRET");

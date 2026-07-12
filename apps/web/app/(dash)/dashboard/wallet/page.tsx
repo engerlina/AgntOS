@@ -4,6 +4,7 @@ import { formatUsd } from "@agntos/core";
 import { getBalance } from "@agntos/core/billing";
 import { creditTxn, db, desc, eq, sql, usageEvent } from "@agntos/db";
 
+import { ConversionPing } from "@/components/conversion-ping";
 import { AddCredits } from "@/components/dashboard/wallet-actions";
 import { Card, Eyebrow } from "@/components/ui";
 import { requireUser } from "@/lib/session";
@@ -34,6 +35,7 @@ export default async function WalletPage() {
 
   return (
     <div>
+      <ConversionPing param="topup" value="success" event="topup_success" />
       <Eyebrow>Wallet</Eyebrow>
       <h1 className="mt-2 mb-8 text-3xl">Credits & usage</h1>
 

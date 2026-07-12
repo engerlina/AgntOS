@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Button, Card, Field, TextArea } from "@/components/ui";
 import { ARCHETYPES } from "@/lib/archetypes";
 import { AGENT_DOMAIN, slugError, slugify } from "@/lib/slug";
+import { track } from "@/lib/track";
 import { cn } from "@/lib/utils";
 
 const STEPS = ["Name", "Role", "Connect", "Launch"] as const;
@@ -101,6 +102,7 @@ export function LaunchWizard() {
         throw new Error("You need an active plan first. Head to Billing to choose Starter or Pro.");
       }
       if (!res.ok) throw new Error(data.error ?? "Launch failed");
+      track("agent_launched", { archetype: archetype ?? "custom", telegram: botToken.trim().length > 20 });
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
@@ -284,7 +286,15 @@ export function LaunchWizard() {
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
         {step < STEPS.length - 1 ? (
-          <Button variant="dark" onClick={() => setStep((s) => s + 1)} disabled={!canNext}>
+          <Button
+            variant="dark"
+            onClick={() => {
+              const n = Math.min(STEPS.length - 1, step + 1);
+              track("wizard_step", { step: STEPS[n] });
+              setStep(n);
+            }}
+            disabled={!canNext}
+          >
             Next <ArrowRight className="h-4 w-4" />
           </Button>
         ) : (

@@ -54,7 +54,7 @@ export function SiteHeader() {
               <Link href="/login" className={linkClass}>
                 Log in
               </Link>
-              <ButtonLink href="/signup" variant="primary">
+              <ButtonLink href="/signup" variant="primary" data-umami-event="cta-header-signup">
                 Get your assistant
               </ButtonLink>
             </>

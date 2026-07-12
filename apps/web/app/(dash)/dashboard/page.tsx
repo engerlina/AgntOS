@@ -5,6 +5,7 @@ import { formatUsd } from "@agntos/core";
 import { getBalance } from "@agntos/core/billing";
 
 import { AgentCard, type AgentView } from "@/components/dashboard/agent-card";
+import { ConversionPing } from "@/components/conversion-ping";
 import { ButtonLink, Card, Eyebrow } from "@/components/ui";
 import { channelsForAgents, listAgents } from "@/lib/agents";
 import { requireUser } from "@/lib/session";
@@ -33,6 +34,7 @@ export default async function DashboardPage() {
 
   return (
     <div>
+      <ConversionPing param="subscribed" value="1" event="subscribed" />
       {/* Wallet strip */}
       <div className="mb-8 flex flex-col items-start justify-between gap-4 border-2 border-line bg-paper px-5 py-4 sm:flex-row sm:items-center">
         <div>

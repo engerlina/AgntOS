@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui";
 import { authClient } from "@/lib/auth-client";
+import { track } from "@/lib/track";
 
 export function SubscribeButton({
   plan,
@@ -21,6 +22,7 @@ export function SubscribeButton({
     setError(null);
     setBusy(true);
     try {
+      track("checkout_started", { plan });
       const origin = window.location.origin;
       const { data, error } = await authClient.subscription.upgrade({
         plan,

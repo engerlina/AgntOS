@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Mono, Montserrat } from "next/font/google";
 import Script from "next/script";
 
+import { AttributionCapture } from "@/components/attribution-capture";
 import { PostHogProvider } from "@/components/posthog-provider";
 import "./globals.css";
 
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${montserrat.variable} ${ibmPlexMono.variable}`}>
       <body>
         <PostHogProvider>{children}</PostHogProvider>
+        <AttributionCapture />
         {/* Vertial (Umami) web analytics */}
         <Script
           defer

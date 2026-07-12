@@ -58,6 +58,44 @@ const jsonLd = {
         category: "subscription",
       })),
     },
+    {
+      "@type": "FAQPage",
+      "@id": `${SITE}/#faq`,
+      mainEntity: [
+        [
+          "How is this different from ChatGPT?",
+          "ChatGPT forgets you between chats and lives in a browser tab. AgntOS is your assistant on its own private machine: it remembers your clients, preferences and voice and gets better the more you use it, it lives where you already are — the web and Telegram — and it runs on a dollar budget you set. Less a chatbot you visit, more an assistant that knows you.",
+        ],
+        [
+          "Will it cost a fortune?",
+          "No. You see the cost in plain dollars and set your own limit, so it can never run up a surprise bill. Top up only when you want, and pause anytime.",
+        ],
+        [
+          "Is my information private?",
+          "Yes. Your assistant is yours alone, and everything it remembers stays private to you — never shared with other customers. Remove it and it's all permanently gone.",
+        ],
+        [
+          "Do I need to be technical?",
+          "Not at all. There's nothing to install and nothing to configure. If you can send a message, you're ready to go.",
+        ],
+        [
+          "What can it actually do for me?",
+          "Remember your clients, preferences and tone; draft messages and documents in your voice; turn notes and pasted text into clear summaries and next steps; think problems through with you; and keep track of what matters. It gets more useful the more you use it.",
+        ],
+        [
+          "How do I talk to it?",
+          "Two easy ways, both included: a simple private space on the web, and Telegram — message it just like you would a colleague.",
+        ],
+        [
+          "Can I cancel?",
+          "Anytime. Pause to stop billing and keep its memory, or remove it to wipe everything. You're always in control.",
+        ],
+      ].map(([q, a]) => ({
+        "@type": "Question",
+        name: q,
+        acceptedAnswer: { "@type": "Answer", text: a },
+      })),
+    },
   ],
 };
 
@@ -84,7 +122,12 @@ export default function LandingPage() {
               It&apos;s private to you, ready in minutes, with nothing to install.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <ButtonLink href="/signup" variant="dark" className="text-base">
+              <ButtonLink
+                href="/signup"
+                variant="dark"
+                className="text-base"
+                data-umami-event="cta-hero-signup"
+              >
                 Get your assistant →
               </ButtonLink>
               <ButtonLink href="#how" variant="ghost" className="text-base">
@@ -245,7 +288,13 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <ButtonLink href="/signup" variant="primary" className="mt-6 w-full">
+              <ButtonLink
+                href="/signup"
+                variant="primary"
+                className="mt-6 w-full"
+                data-umami-event="cta-pricing-signup"
+                data-umami-event-plan={plan.tier}
+              >
                 Start {plan.name}
               </ButtonLink>
             </Card>
@@ -304,7 +353,12 @@ export default function LandingPage() {
             Set it up, give it a name, and it&apos;ll be ready to chat in a couple of minutes.
           </p>
           <div className="mt-8 flex justify-center">
-            <ButtonLink href="/signup" variant="dark" className="text-base">
+            <ButtonLink
+              href="/signup"
+              variant="dark"
+              className="text-base"
+              data-umami-event="cta-final-signup"
+            >
               Get your assistant →
             </ButtonLink>
           </div>

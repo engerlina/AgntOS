@@ -8,6 +8,10 @@ export const metadata: Metadata = {
   title: "Pricing",
   description: "Two plans, prepaid model credits on top. No surprises — your agent has a hard spend cap.",
   alternates: { canonical: "/pricing" },
+  openGraph: {
+    title: "AgntOS Pricing — from about a dollar a day",
+    description: "Two plans, prepaid credits on top, and a hard spend cap so there's never a surprise bill.",
+  },
 };
 
 export default function PricingPage() {

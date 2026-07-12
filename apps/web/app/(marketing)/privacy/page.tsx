@@ -6,6 +6,10 @@ export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "How AgntOS collects, uses, and protects your information.",
   alternates: { canonical: "/privacy" },
+  openGraph: {
+    title: "AgntOS Privacy Policy",
+    description: "How AgntOS collects, uses, and protects your information.",
+  },
 };
 
 export default function PrivacyPage() {

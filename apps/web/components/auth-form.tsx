@@ -7,6 +7,7 @@ import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { Button, Field } from "@/components/ui";
 import { VerifyNotice } from "@/components/verify-notice";
+import { track } from "@/lib/track";
 
 export function AuthForm({
   mode,
@@ -42,6 +43,7 @@ export function AuthForm({
           callbackURL: redirectTo,
         });
         if (error) throw new Error(error.message || "Sign-up failed");
+        track("signup_submitted");
         setVerifySent(true);
       } else {
         const { error } = await authClient.signIn.email({ email, password });
